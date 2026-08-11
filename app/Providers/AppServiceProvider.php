@@ -2,6 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\AttendanceRecord;
+use App\Models\StudentNotification;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +24,25 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        View::composer('layouts.app', function ($view) {
+            if (! Auth::check() || Auth::user()->role !== User::ROLE_TEACHER) {
+                return;
+            }
+
+            $teacher = Auth::user();
+            $absentNotificationCount = AttendanceRecord::where('teacher_id', $teacher->id)
+                ->where('status', 'absent')
+                ->where('date', '>=', now()->subDays(7)->toDateString())
+                ->distinct('student_id')
+                ->count('student_id');
+
+            $pendingParentMessageCount = StudentNotification::where('teacher_id', $teacher->id)
+                ->whereNotNull('parent_reply')
+                ->whereNull('teacher_reply')
+                ->count();
+
+            $view->with('absentNotificationCount', $absentNotificationCount)
+                ->with('pendingParentMessageCount', $pendingParentMessageCount);
+        });
     }
 }
