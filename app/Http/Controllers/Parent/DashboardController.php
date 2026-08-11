@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Parent;
 
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceRecord;
+use App\Models\NotificationReply;
 use App\Models\Student;
 use App\Models\StudentNotification;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class DashboardController extends Controller
 
         $today = now()->toDateString();
         $attendance = AttendanceRecord::where('student_id', $student->id)
-            ->where('date', $today)
+            ->whereDate('date', $today)
             ->latest()
             ->first();
 
@@ -27,6 +28,7 @@ class DashboardController extends Controller
             ->get();
 
         $notifications = StudentNotification::where('student_id', $student->id)
+            ->where('recipient', 'guardian')
             ->orderByDesc('created_at')
             ->take(5)
             ->get();
@@ -46,6 +48,8 @@ class DashboardController extends Controller
     {
         $student = Student::findOrFail($request->session()->get('parent_student_id'));
         $notifications = StudentNotification::where('student_id', $student->id)
+            ->where('recipient', 'guardian')
+            ->with('replies')
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -65,7 +69,7 @@ class DashboardController extends Controller
             'reply' => 'required|string|max:1000',
         ]);
 
-        $notification->appendReply('parent', $data['reply']);
+        $notification->addReply(NotificationReply::SENDER_PARENT, $data['reply']);
 
         return redirect()->route('parent.notifications')->with('success', 'Reply sent to the teacher.');
     }

@@ -114,4 +114,32 @@ class StudentAdditionTest extends TestCase
             'class_room_id' => null,
         ]);
     }
+
+    public function test_student_can_be_added_without_mobile_number(): void
+    {
+        $teacher = User::create([
+            'name' => 'Teacher One',
+            'email' => 'teacher@example.com',
+            'password' => bcrypt('password'),
+            'role' => User::ROLE_TEACHER,
+            'active' => true,
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('teacher.students.store'), [
+                'student_id' => 'S004',
+                'name' => 'Alice Brown',
+                'sex' => 'female',
+                'email' => 'alice@example.com',
+                'class_room_id' => null,
+            ])
+            ->assertRedirect(route('teacher.students.all'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('students', [
+            'name' => 'Alice Brown',
+            'student_id' => 'S004',
+            'mobile' => null,
+        ]);
+    }
 }

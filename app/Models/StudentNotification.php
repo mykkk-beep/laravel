@@ -14,19 +14,28 @@ class StudentNotification extends Model
         return $this->belongsTo(Student::class);
     }
 
-    public function appendReply(string $side, string $reply): void
+    public function replies()
     {
-        $column = $side === 'parent' ? 'parent_reply' : 'teacher_reply';
-        $newReply = trim($reply);
+        return $this->hasMany(NotificationReply::class, 'notification_id')->orderBy('created_at');
+    }
 
-        if ($newReply === '') {
-            return;
+    public function latestReply()
+    {
+        return $this->hasOne(NotificationReply::class, 'notification_id')->latestOfMany();
+    }
+
+    public function addReply(string $sender, string $message): NotificationReply
+    {
+        $message = trim($message);
+
+        if ($message === '') {
+            throw new \InvalidArgumentException('Reply message cannot be empty.');
         }
 
-        $existingReply = trim((string) $this->getAttribute($column));
-        $combinedReply = $existingReply === '' ? $newReply : $existingReply."\n\n".$newReply;
-
-        $this->forceFill([$column => $combinedReply])->save();
+        return $this->replies()->create([
+            'sender' => $sender,
+            'message' => $message,
+        ]);
     }
 
     protected $fillable = [
@@ -34,7 +43,6 @@ class StudentNotification extends Model
         'teacher_id',
         'title',
         'message',
-        'parent_reply',
-        'teacher_reply',
+        'recipient',
     ];
 }

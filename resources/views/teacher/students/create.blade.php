@@ -53,10 +53,6 @@
                     <input type="text" name="name" class="form-input" value="{{ old('name') }}" required>
                 </div>
                 <div>
-                    <label class="form-label">Middle Name</label>
-                    <input type="text" name="middle_name" class="form-input" value="{{ old('middle_name') }}">
-                </div>
-                <div>
                     <label class="form-label">Last Name</label>
                     <input type="text" name="last_name" class="form-input" value="{{ old('last_name') }}">
                 </div>
@@ -70,10 +66,6 @@
                         <option value="female" {{ old('sex') == 'female' ? 'selected' : '' }}>Female</option>
                         <option value="other" {{ old('sex') == 'other' ? 'selected' : '' }}>Other</option>
                     </select>
-                </div>
-                <div>
-                    <label class="form-label">Contact Number</label>
-                    <input type="text" name="mobile" class="form-input" value="{{ old('mobile') }}" required>
                 </div>
                 <div>
                     <label class="form-label">Status</label>

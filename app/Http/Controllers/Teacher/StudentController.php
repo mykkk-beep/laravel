@@ -25,10 +25,10 @@ class StudentController extends Controller
 
     public function allStudents()
     {
+        $teacherClassIds = Auth::user()->classes()->pluck('classes.id');
+
         $students = Student::with('classRoom')
-            ->whereHas('classRoom', function ($query) {
-                $query->where('teacher_id', Auth::id());
-            })
+            ->whereIn('class_room_id', $teacherClassIds)
             ->orderBy('name')
             ->get();
 
@@ -70,7 +70,7 @@ class StudentController extends Controller
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'sex' => ['required', 'in:male,female,other'],
-            'mobile' => ['required', 'string', 'max:20'],
+            'mobile' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
             'class_room_id' => ['nullable', 'exists:classes,id'],
         ]);
@@ -78,8 +78,8 @@ class StudentController extends Controller
         $classRoomId = null;
 
         if (! empty($data['class_room_id'])) {
-            $classRoom = ClassRoom::where('id', $data['class_room_id'])
-                ->where('teacher_id', Auth::id())
+            $classRoom = Auth::user()->classes()
+                ->where('id', $data['class_room_id'])
                 ->first();
 
             if ($classRoom) {
@@ -93,7 +93,7 @@ class StudentController extends Controller
             'student_id' => $data['student_id'],
             'name' => $fullName,
             'sex' => $data['sex'],
-            'mobile' => $data['mobile'],
+            'mobile' => $data['mobile'] ?? null,
             'email' => $data['email'] ?? null,
             'class_room_id' => $classRoomId,
             'status' => $classRoomId ? 'pending' : 'not_enrolled',
@@ -120,7 +120,7 @@ class StudentController extends Controller
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'sex' => ['required', 'in:male,female,other'],
-            'mobile' => ['required', 'string', 'max:20'],
+            'mobile' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
         ]);
 
@@ -130,7 +130,7 @@ class StudentController extends Controller
             'student_id' => $data['student_id'],
             'name' => $fullName,
             'sex' => $data['sex'],
-            'mobile' => $data['mobile'],
+            'mobile' => $data['mobile'] ?? null,
             'email' => $data['email'] ?? null,
             'class_room_id' => $classRoom->id,
             'status' => 'pending',
@@ -148,8 +148,8 @@ class StudentController extends Controller
     public function enroll(Request $request, Student $student)
     {
         $classRoomId = $request->input('class_room_id', $student->class_room_id);
-        $classRoom = ClassRoom::where('id', $classRoomId)
-            ->where('teacher_id', Auth::id())
+        $classRoom = Auth::user()->classes()
+            ->where('id', $classRoomId)
             ->first();
 
         abort_unless($classRoom, 403);
@@ -240,14 +240,14 @@ class StudentController extends Controller
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'sex' => ['required', 'in:male,female,other'],
-            'mobile' => ['required', 'string', 'max:20'],
+            'mobile' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
             'class_room_id' => ['required', 'exists:classes,id'],
         ]);
 
         // Verify new class belongs to teacher
-        $newClass = ClassRoom::where('id', $data['class_room_id'])
-            ->where('teacher_id', Auth::id())
+        $newClass = Auth::user()->classes()
+            ->where('id', $data['class_room_id'])
             ->firstOrFail();
 
         $data['name'] = $this->buildFullName($data);

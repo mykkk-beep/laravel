@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use App\Models\StudentNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 
@@ -76,12 +77,45 @@ class StudentPortalController extends Controller
             $attendancePercentage = 0;
         }
 
+        $teacherMessages = StudentNotification::where('student_id', $student->id)
+            ->where('recipient', 'student')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        $notificationCount = $teacherMessages->count();
+
         return view('student.dashboard', [
             'student' => $student,
             'attendanceRecords' => $attendanceRecords,
             'totalClasses' => $totalClasses,
             'presentCount' => $presentCount,
             'attendancePercentage' => $attendancePercentage,
+            'notificationCount' => $notificationCount,
+        ]);
+    }
+
+    /**
+     * Show student notifications
+     */
+    public function notifications(Request $request)
+    {
+        $studentId = Session::get('student_id');
+        $student = Student::findOrFail($studentId);
+
+        $teacherMessages = StudentNotification::where('student_id', $student->id)
+            ->where('recipient', 'student')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $recentAttendance = $student->attendanceRecords()
+            ->with('classRoom')
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
+
+        return view('student.notifications', [
+            'student' => $student,
+            'notifications' => $teacherMessages,
+            'recentAttendance' => $recentAttendance,
         ]);
     }
 

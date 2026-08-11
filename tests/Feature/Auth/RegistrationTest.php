@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\User;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,7 +18,7 @@ class RegistrationTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_new_users_can_register(): void
+    public function test_new_teachers_register_as_pending_and_must_wait_for_admin_approval(): void
     {
         $response = $this->post('/register', [
             'name' => 'Test User',
@@ -26,7 +27,13 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(RouteServiceProvider::HOME);
+        $user = User::where('email', 'test@example.com')->firstOrFail();
+
+        $this->assertSame(User::ROLE_TEACHER, $user->role);
+        $this->assertSame(User::STATUS_PENDING, $user->status);
+        $this->assertFalse($user->active);
+        $this->assertGuest();
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHas('status', 'Registration successful. Your account is pending administrator approval.');
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AttendanceRecord;
 use App\Models\ClassRoom;
 use App\Models\Student;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Auth;
 function buildAttendanceSummary(int $classRoomId, string $date): array
 {
     $records = AttendanceRecord::where('class_room_id', $classRoomId)
-        ->where('date', $date)
+        ->whereDate('date', $date)
         ->get();
 
     $total = $records->count();
@@ -32,6 +33,94 @@ function buildAttendanceSummary(int $classRoomId, string $date): array
 
 class AttendanceController extends Controller
 {
+    private function getFilteredRecords(Request $request)
+    {
+        $teacher = Auth::user();
+
+        $query = AttendanceRecord::with(['student.classRoom'])
+            ->whereHas('classRoom', function ($query) use ($teacher) {
+                $query->where('teacher_id', $teacher->id);
+            });
+
+        if ($request->filled('class_room_id')) {
+            $query->where('class_room_id', $request->class_room_id);
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('date', $request->date);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        return $query->latest('created_at')->get();
+    }
+
+    private function buildSummary($records): array
+    {
+        $total = $records->count();
+        $present = $records->where('status', 'present')->count();
+        $late = $records->where('status', 'late')->count();
+        $absent = $records->where('status', 'absent')->count();
+        $attendanceRate = $total > 0 ? round((($present + $late) / $total) * 100, 1) : 0;
+
+        return [
+            'total' => $total,
+            'present' => $present,
+            'late' => $late,
+            'absent' => $absent,
+            'attendance_rate' => $attendanceRate,
+        ];
+    }
+
+    private function getWeekDaysForDate(string $date): array
+    {
+        $startOfWeek = Carbon::parse($date)->startOfWeek();
+        $weekDays = [];
+
+        for ($i = 0; $i < 7; $i++) {
+            $day = $startOfWeek->copy()->addDays($i);
+
+            $weekDays[] = [
+                'label' => $day->format('D'),
+                'date' => $day->toDateString(),
+                'is_selected' => $day->toDateString() === $date,
+            ];
+        }
+
+        return $weekDays;
+    }
+
+    private function buildStudentAttendanceStatuses(?ClassRoom $classRoom, string $date)
+    {
+        if (! $classRoom) {
+            return collect();
+        }
+
+        $studentIds = $classRoom->students()->pluck('id');
+        $records = AttendanceRecord::where('class_room_id', $classRoom->id)
+            ->whereDate('date', $date)
+            ->whereIn('student_id', $studentIds)
+            ->get()
+            ->keyBy('student_id');
+
+        return $classRoom->students()
+            ->orderBy('name')
+            ->get()
+            ->map(function (Student $student) use ($records) {
+                $record = $records->get($student->id);
+
+                return [
+                    'id' => $student->id,
+                    'student_id' => $student->student_id,
+                    'name' => $student->name,
+                    'status' => $record?->status ?? 'absent',
+                    'notes' => $record?->notes,
+                ];
+            });
+    }
+
     public function scan()
     {
         $classes = Auth::user()
@@ -60,37 +149,67 @@ class AttendanceController extends Controller
     {
         $teacher = Auth::user();
         $classes = $teacher->classes()->orderBy('name')->get();
+        $records = $this->getFilteredRecords($request);
+        $summary = $this->buildSummary($records);
+        $selectedDate = $request->date ?: today()->toDateString();
+        $weekDays = $this->getWeekDaysForDate($selectedDate);
+        $selectedClass = $classes->firstWhere('id', $request->class_room_id);
+        $studentStatuses = $this->buildStudentAttendanceStatuses($selectedClass, $selectedDate);
 
-        $query = AttendanceRecord::with(['student.classRoom'])
-            ->where('teacher_id', $teacher->id);
+        return view('teacher.attendance.records', compact('records', 'classes', 'summary', 'weekDays', 'selectedDate', 'selectedClass', 'studentStatuses'));
+    }
 
-        if ($request->filled('class_room_id')) {
-            $query->where('class_room_id', $request->class_room_id);
+    public function report(Request $request)
+    {
+        $teacher = Auth::user();
+        $classes = $teacher->classes()->orderBy('name')->get();
+        $records = $this->getFilteredRecords($request);
+        $summary = $this->buildSummary($records);
+
+        return view('teacher.attendance.report', compact('records', 'classes', 'summary'));
+    }
+
+    public function export(Request $request, string $format)
+    {
+        $records = $this->getFilteredRecords($request);
+        $summary = $this->buildSummary($records);
+
+        if ($format === 'excel') {
+            $headers = ['Date', 'Student', 'Class', 'Status', 'Scanned At'];
+
+            $callback = function () use ($headers, $records): void {
+                $handle = fopen('php://output', 'w');
+                fputcsv($handle, $headers);
+
+                foreach ($records as $record) {
+                    fputcsv($handle, [
+                        $record->date?->format('Y-m-d') ?? '',
+                        $record->student?->name ?? '',
+                        optional($record->student?->classRoom)->name ?? '',
+                        ucfirst((string) $record->status),
+                        $record->created_at?->format('Y-m-d H:i:s') ?? '',
+                    ]);
+                }
+
+                fclose($handle);
+            };
+
+            return response()->streamDownload($callback, 'attendance-report.csv', [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+            ]);
         }
 
-        if ($request->filled('date')) {
-            $query->where('date', $request->date);
+        if ($format === 'pdf') {
+            if (! class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+                abort(500, 'PDF export is not available.');
+            }
+
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('teacher.attendance.pdf', compact('records', 'summary'));
+
+            return $pdf->download('attendance-report.pdf');
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $records = $query->latest('created_at')->get();
-
-        $total = $records->count();
-        $present = $records->where('status', 'present')->count();
-        $absent = $records->where('status', 'absent')->count();
-        $attendanceRate = $total > 0 ? round(($present / $total) * 100, 1) : 0;
-
-        $summary = [
-            'total' => $total,
-            'present' => $present,
-            'absent' => $absent,
-            'attendance_rate' => $attendanceRate,
-        ];
-
-        return view('teacher.attendance.records', compact('records', 'classes', 'summary'));
+        abort(404);
     }
 
     public function initialize(Request $request)
@@ -109,7 +228,7 @@ class AttendanceController extends Controller
         foreach ($classRoom->students as $student) {
             $record = AttendanceRecord::where('student_id', $student->id)
                 ->where('class_room_id', $classRoom->id)
-                ->where('date', $date)
+                ->whereDate('date', $date)
                 ->first();
 
             if (! $record) {
@@ -131,6 +250,124 @@ class AttendanceController extends Controller
             'created' => $created,
             'summary' => buildAttendanceSummary($classRoom->id, $date),
         ]);
+    }
+
+    public function markAllPresent(Request $request)
+    {
+        $data = $request->validate([
+            'class_room_id' => ['required', 'exists:classes,id'],
+            'subject_id' => ['nullable', 'exists:subjects,id'],
+        ]);
+
+        $classRoom = ClassRoom::findOrFail($data['class_room_id']);
+        abort_unless($classRoom->teacher_id === Auth::id(), 403);
+
+        $todayDate = now()->toDateString();
+
+        foreach ($classRoom->students as $student) {
+            $record = AttendanceRecord::where('student_id', $student->id)
+                ->where('class_room_id', $classRoom->id)
+                ->whereDate('date', $todayDate)
+                ->first();
+
+            if ($record) {
+                $record->update([
+                    'status' => 'present',
+                    'teacher_id' => Auth::id(),
+                    'subject_id' => $data['subject_id'] ?? $record->subject_id,
+                    'qr_code' => $student->student_id,
+                    'time_in' => $record->time_in ?? now()->toTimeString(),
+                ]);
+            } else {
+                AttendanceRecord::create([
+                    'student_id' => $student->id,
+                    'class_room_id' => $classRoom->id,
+                    'subject_id' => $data['subject_id'] ?? null,
+                    'teacher_id' => Auth::id(),
+                    'status' => 'present',
+                    'date' => $todayDate,
+                    'time_in' => now()->toTimeString(),
+                    'qr_code' => $student->student_id,
+                ]);
+            }
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'All students marked present for the selected class.',
+                'summary' => buildAttendanceSummary($classRoom->id, $todayDate),
+            ]);
+        }
+
+        return back()->with('success', 'All students marked present for the selected class.');
+    }
+
+    public function finalizeQuick(Request $request)
+    {
+        $data = $request->validate([
+            'class_room_id' => ['required', 'exists:classes,id'],
+            'subject_id' => ['nullable', 'exists:subjects,id'],
+        ]);
+
+        $classRoom = ClassRoom::findOrFail($data['class_room_id']);
+        abort_unless($classRoom->teacher_id === Auth::id(), 403);
+
+        $todayDate = now()->toDateString();
+        $records = AttendanceRecord::where('class_room_id', $classRoom->id)
+            ->whereDate('date', $todayDate)
+            ->get();
+
+        $presentStudentIds = $records->where('status', 'present')->pluck('student_id')->all();
+
+        foreach ($classRoom->students as $student) {
+            $record = $records->firstWhere('student_id', $student->id);
+
+            if (! $record) {
+                AttendanceRecord::create([
+                    'student_id' => $student->id,
+                    'class_room_id' => $classRoom->id,
+                    'subject_id' => $data['subject_id'] ?? null,
+                    'teacher_id' => Auth::id(),
+                    'status' => in_array($student->id, $presentStudentIds, true) ? 'present' : 'absent',
+                    'date' => $todayDate,
+                    'qr_code' => $student->student_id,
+                ]);
+
+                continue;
+            }
+
+            if ($record->status !== 'present' && in_array($student->id, $presentStudentIds, true)) {
+                $record->update([
+                    'status' => 'present',
+                    'teacher_id' => Auth::id(),
+                    'subject_id' => $data['subject_id'] ?? $record->subject_id,
+                    'qr_code' => $student->student_id,
+                ]);
+            } elseif ($record->status === 'present' && ! in_array($student->id, $presentStudentIds, true)) {
+                $record->update([
+                    'status' => 'absent',
+                    'teacher_id' => Auth::id(),
+                    'subject_id' => $data['subject_id'] ?? $record->subject_id,
+                    'qr_code' => $student->student_id,
+                ]);
+            } elseif ($record->status !== 'present') {
+                $record->update([
+                    'status' => 'absent',
+                    'teacher_id' => Auth::id(),
+                    'subject_id' => $data['subject_id'] ?? $record->subject_id,
+                    'qr_code' => $student->student_id,
+                ]);
+            }
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Quick attendance finalized for the selected class.',
+                'summary' => buildAttendanceSummary($classRoom->id, $todayDate),
+            ]);
+        }
+
+        return back()->with('success', 'Quick attendance finalized for the selected class.');
     }
 
     public function record(Request $request)
@@ -179,7 +416,7 @@ class AttendanceController extends Controller
         $todayDate = now()->toDateString();
         $todayAttendance = AttendanceRecord::where('student_id', $student->id)
             ->where('class_room_id', $classRoom->id)
-            ->where('date', $todayDate)
+            ->whereDate('date', $todayDate)
             ->first();
 
         if ($todayAttendance) {

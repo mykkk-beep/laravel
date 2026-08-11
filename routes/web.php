@@ -59,6 +59,7 @@ Route::prefix('student')->name('student.')->group(function () {
 
     Route::middleware('student.authenticated')->group(function () {
         Route::get('/dashboard', [StudentPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/notifications', [StudentPortalController::class, 'notifications'])->name('notifications');
         Route::get('/profile', [StudentPortalController::class, 'profile'])->name('profile');
         Route::post('/logout', [StudentPortalController::class, 'logout'])->name('logout');
     });
@@ -82,6 +83,12 @@ Route::middleware(['auth', 'role:teacher'])->group(function () {
     Route::get('/teacher/notification', [TeacherDashboardController::class, 'notifications'])->name('teacher.notifications');
     Route::get('/teacher/recommendations', [TeacherDashboardController::class, 'recommendations'])->name('teacher.recommendations');
     Route::post('/teacher/recommendations/{student}/generate', [TeacherDashboardController::class, 'generateRecommendation'])->name('teacher.recommendations.generate');
+    Route::get('/teacher/recommendations/{notification}', [TeacherDashboardController::class, 'showRecommendation'])->name('teacher.recommendations.show');
+    Route::get('/teacher/recommendations/{notification}/edit', [TeacherDashboardController::class, 'editRecommendation'])->name('teacher.recommendations.edit');
+    Route::put('/teacher/recommendations/{notification}', [TeacherDashboardController::class, 'updateRecommendation'])->name('teacher.recommendations.update');
+    Route::delete('/teacher/recommendations/{notification}', [TeacherDashboardController::class, 'destroyRecommendation'])->name('teacher.recommendations.destroy');
+    Route::post('/teacher/recommendations/{notification}/resend', [TeacherDashboardController::class, 'resendRecommendation'])->name('teacher.recommendations.resend');
+    Route::get('/teacher/recommendations/{notification}/data', [TeacherDashboardController::class, 'recommendationData'])->name('teacher.recommendations.data');
     Route::post('/teacher/notify-student/{student}', [TeacherDashboardController::class, 'notifyStudent'])->name('teacher.notifyStudent');
     Route::post('/teacher/notifications/{notification}/reply', [TeacherDashboardController::class, 'replyToParent'])->name('teacher.notifications.reply');
 
@@ -110,6 +117,8 @@ Route::middleware(['auth', 'role:teacher'])->group(function () {
     Route::get('/teacher/attendance/export/{format}', [TeacherAttendanceController::class, 'export'])->name('teacher.attendance.export');
     Route::post('/teacher/attendance/initialize', [TeacherAttendanceController::class, 'initialize'])->name('teacher.attendance.initialize');
     Route::post('/teacher/attendance/record', [TeacherAttendanceController::class, 'record'])->name('teacher.attendance.record');
+    Route::post('/teacher/attendance/finalize-quick', [TeacherAttendanceController::class, 'finalizeQuick'])->name('teacher.attendance.finalize-quick');
+    Route::post('/teacher/attendance/mark-all-present', [TeacherAttendanceController::class, 'markAllPresent'])->name('teacher.attendance.mark-all-present');
 
     Route::get('/teacher/subjects', [TeacherSubjectController::class, 'index'])->name('teacher.subjects.index');
     Route::get('/teacher/subjects/create', [TeacherSubjectController::class, 'create'])->name('teacher.subjects.create');

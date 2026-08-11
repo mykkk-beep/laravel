@@ -21,6 +21,12 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
+        if (Auth::check()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = Auth::user();
 

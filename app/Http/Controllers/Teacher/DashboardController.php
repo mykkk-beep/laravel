@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\AttendanceRecord;
 use App\Models\ClassRoom;
 use App\Models\Enrollment;
+use App\Models\NotificationReply;
 use App\Models\Student;
 use App\Models\StudentNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 
 class DashboardController extends Controller
 {
@@ -20,9 +22,9 @@ class DashboardController extends Controller
         $classes = $teacher->classes()->withCount('students')->latest()->get();
 
         $today = now()->toDateString();
-        $todayAttendance = AttendanceRecord::where('teacher_id', $teacher->id)
-            ->where('date', $today)
-            ->get();
+        $todayAttendance = AttendanceRecord::whereHas('classRoom', function ($query) use ($teacher) {
+            $query->where('teacher_id', $teacher->id);
+        })->whereDate('date', $today)->get();
 
         $todayClasses = ClassRoom::where('teacher_id', $teacher->id)
             ->whereDate('date', $today)
@@ -45,13 +47,15 @@ class DashboardController extends Controller
             : 0;
 
         $recentActivities = AttendanceRecord::with('student')
-            ->where('teacher_id', $teacher->id)
+            ->whereHas('classRoom', function ($query) use ($teacher) {
+                $query->where('teacher_id', $teacher->id);
+            })
             ->latest('created_at')
             ->take(8)
             ->get();
 
         $upcomingClasses = ClassRoom::where('teacher_id', $teacher->id)
-            ->where('date', '>=', $today)
+            ->whereDate('date', '>=', $today)
             ->orderBy('date')
             ->orderBy('time')
             ->take(5)
@@ -66,9 +70,9 @@ class DashboardController extends Controller
             ->get();
 
         $startDate = now()->subDays(6)->toDateString();
-        $records = AttendanceRecord::where('teacher_id', $teacher->id)
-            ->whereBetween('date', [$startDate, $today])
-            ->get()
+        $records = AttendanceRecord::whereHas('classRoom', function ($query) use ($teacher) {
+            $query->where('teacher_id', $teacher->id);
+        })->whereBetween('date', [$startDate, $today])->get()
             ->groupBy(function ($item) {
                 return $item->date->toDateString();
             });
@@ -123,7 +127,7 @@ class DashboardController extends Controller
         })->where('status', Enrollment::STATUS_ENROLLED)->count();
 
         $messageThreads = StudentNotification::where('teacher_id', $teacher->id)
-            ->with('student')
+            ->with(['student', 'replies'])
             ->orderByDesc('created_at')
             ->get();
 
@@ -143,8 +147,9 @@ class DashboardController extends Controller
         $students = Student::whereHas('classRoom', function ($query) use ($teacher) {
             $query->where('teacher_id', $teacher->id);
         })->get();
+        $recommendationItems = $this->getRecommendationItems();
 
-        return view('teacher.recommendations.index', compact('recommendations', 'students'));
+        return view('teacher.recommendations.index', compact('recommendations', 'students', 'recommendationItems'));
     }
 
     public function generateRecommendation(Request $request, Student $student)
@@ -153,20 +158,48 @@ class DashboardController extends Controller
 
         abort_unless($student->classRoom && $student->classRoom->teacher_id === $teacher->id, 403);
 
-        $payload = $this->buildRecommendationPayload($student, $teacher);
-        $customMessage = trim((string) $request->input('message', ''));
-        $message = $this->buildRecommendationMessage($payload, $teacher, $customMessage ?: null);
-
-        StudentNotification::create([
-            'student_id' => $student->id,
-            'teacher_id' => $teacher->id,
-            'title' => 'Recommendation for '.$student->name,
-            'message' => $message,
+        $data = $request->validate([
+            'message' => 'nullable|string|max:2000',
+            'student_message' => 'nullable|string|max:2000',
+            'priority_level' => 'nullable|string|in:Low,Medium,High',
+            'save_draft' => 'nullable|boolean',
+            'send_to_parent' => 'nullable|boolean',
+            'send_to_student' => 'nullable|boolean',
         ]);
 
+        $payload = $this->buildRecommendationPayload($student, $teacher, $data['priority_level'] ?? null);
+        $customMessage = trim((string) ($data['message'] ?? ''));
+        $studentMessage = trim((string) ($data['student_message'] ?? ''));
+        $message = $this->buildRecommendationMessage($payload, $teacher, $customMessage ?: null);
+        $isDraft = (bool) ($data['save_draft'] ?? false);
+        $sendToParent = (bool) ($data['send_to_parent'] ?? true);
+        $sendToStudent = (bool) ($data['send_to_student'] ?? false);
+
+        if ($sendToParent) {
+            StudentNotification::create([
+                'student_id' => $student->id,
+                'teacher_id' => $teacher->id,
+                'title' => $isDraft ? 'Draft Recommendation for '.$student->name : 'Recommendation for '.$student->name,
+                'message' => $isDraft ? ($customMessage !== '' ? $customMessage : 'Draft recommendation saved for later review.') : $message,
+                'recipient' => 'guardian',
+            ]);
+        }
+
+        if ($sendToStudent) {
+            StudentNotification::create([
+                'student_id' => $student->id,
+                'teacher_id' => $teacher->id,
+                'title' => 'Student Recommendation',
+                'message' => $studentMessage !== '' ? $studentMessage : ($customMessage !== '' ? $customMessage : $message),
+                'recipient' => 'student',
+            ]);
+        }
+
         AttendanceRecord::where('student_id', $student->id)
-            ->where('teacher_id', $teacher->id)
-            ->where('date', '>=', now()->subDays(7)->toDateString())
+            ->whereHas('classRoom', function ($query) use ($teacher) {
+                $query->where('teacher_id', $teacher->id);
+            })
+            ->whereDate('date', '>=', now()->subDays(7)->toDateString())
             ->where('status', 'absent')
             ->update(['notified' => true]);
 
@@ -180,9 +213,11 @@ class DashboardController extends Controller
         abort_unless($student->classRoom && $student->classRoom->teacher_id === $teacher->id, 403);
 
         $absentRecords = AttendanceRecord::where('student_id', $student->id)
-            ->where('teacher_id', $teacher->id)
+            ->whereHas('classRoom', function ($query) use ($teacher) {
+                $query->where('teacher_id', $teacher->id);
+            })
             ->where('status', 'absent')
-            ->where('date', '>=', now()->subDays(7)->toDateString())
+            ->whereDate('date', '>=', now()->subDays(7)->toDateString())
             ->update(['notified' => true]);
 
         StudentNotification::create([
@@ -190,6 +225,7 @@ class DashboardController extends Controller
             'teacher_id' => $teacher->id,
             'title' => 'Attendance notice',
             'message' => 'Your child has recent unexcused absences and a teacher has sent this notice for review.',
+            'recipient' => 'guardian',
         ]);
 
         if (! $absentRecords) {
@@ -209,16 +245,18 @@ class DashboardController extends Controller
             'reply' => 'required|string|max:1000',
         ]);
 
-        $notification->appendReply('teacher', $data['reply']);
+        $notification->addReply(NotificationReply::SENDER_TEACHER, $data['reply']);
 
         return redirect()->route('teacher.notifications')->with('success', 'Reply sent to the parent.');
     }
 
-    private function buildRecommendationPayload(Student $student, $teacher): array
+    private function buildRecommendationPayload(Student $student, $teacher, ?string $priorityOverride = null): array
     {
         $recentRecords = AttendanceRecord::where('student_id', $student->id)
-            ->where('teacher_id', $teacher->id)
-            ->where('date', '>=', now()->subDays(7)->toDateString())
+            ->whereHas('classRoom', function ($query) use ($teacher) {
+                $query->where('teacher_id', $teacher->id);
+            })
+            ->whereDate('date', '>=', now()->subDays(7)->toDateString())
             ->get();
 
         $present = $recentRecords->where('status', 'present')->count();
@@ -240,7 +278,7 @@ class DashboardController extends Controller
 
         $teacherNote = $this->buildTeacherObservation($absent, $averageGrade);
         $category = $this->resolveCategory($absent, $averageGrade);
-        $priority = $this->resolvePriority($absent, $averageGrade, $consecutiveAbsent);
+        $priority = $priorityOverride ?? $this->resolvePriority($absent, $averageGrade, $consecutiveAbsent);
 
         return [
             'student_name' => $student->name,
@@ -285,6 +323,25 @@ MESSAGE;
         }
 
         return $message;
+    }
+
+    private function buildStudentPerformanceMessage(array $payload): string
+    {
+        $lines = [];
+        $lines[] = 'Performance Summary';
+        $lines[] = '';
+        $lines[] = 'Student: '.$payload['student_name'];
+        $lines[] = 'Subject: '.$payload['subject'];
+        $lines[] = 'Present: '.$payload['present'];
+        $lines[] = 'Late: '.$payload['late'];
+        $lines[] = 'Absent: '.$payload['absent'];
+        $lines[] = 'Average Grade: '.$payload['average_grade'];
+        $lines[] = 'Priority: '.$payload['priority'];
+        $lines[] = '';
+        $lines[] = 'Teacher Note:';
+        $lines[] = $payload['teacher_note'];
+
+        return implode(PHP_EOL, $lines);
     }
 
     private function buildTeacherObservation(int $absent, float $averageGrade): string
@@ -345,12 +402,127 @@ MESSAGE;
             ->get()
             ->filter(function (Student $student) use ($teacher) {
                 $absentCount = AttendanceRecord::where('student_id', $student->id)
-                    ->where('teacher_id', $teacher->id)
+                    ->whereHas('classRoom', function ($query) use ($teacher) {
+                        $query->where('teacher_id', $teacher->id);
+                    })
                     ->where('status', 'absent')
-                    ->where('date', '>=', now()->subDays(7)->toDateString())
+                    ->whereDate('date', '>=', now()->subDays(7)->toDateString())
                     ->count();
 
                 return $absentCount >= 3;
             });
+    }
+
+    private function getRecommendationItems(): Collection
+    {
+        $teacher = Auth::user();
+
+        return StudentNotification::where('teacher_id', $teacher->id)
+            ->where('recipient', 'guardian')
+            ->where(function ($query) {
+                $query->where('title', 'like', 'Recommendation for %')
+                    ->orWhere('title', 'like', 'Draft Recommendation for %');
+            })
+            ->with(['student.classRoom'])
+            ->latest('created_at')
+            ->get()
+            ->map(function (StudentNotification $notification) use ($teacher) {
+                $student = $notification->student;
+                $attendanceRecords = $student?->attendanceRecords ?? collect();
+                $absentCount = $attendanceRecords->where('status', 'absent')->count();
+                $lateCount = $attendanceRecords->where('status', 'late')->count();
+                $presentCount = $attendanceRecords->where('status', 'present')->count();
+                $attendancePercentage = $attendanceRecords->count() > 0
+                    ? round(($presentCount / $attendanceRecords->count()) * 100)
+                    : 100;
+                $grade = optional($student?->enrollments()->where('status', Enrollment::STATUS_ENROLLED)->latest()->first())->grade;
+                $category = $absentCount >= 3 ? 'Attendance' : ($grade !== null && $grade < 75 ? 'Academic Performance' : 'Behavior');
+                $status = $notification->replies->isNotEmpty() ? 'Viewed' : (str_starts_with($notification->title, 'Draft Recommendation') ? 'Draft' : 'Sent');
+
+                return [
+                    'id' => $notification->id,
+                    'student_name' => $student?->name ?? 'Unknown Student',
+                    'class_name' => optional($student?->classRoom)->name ?? 'Unassigned',
+                    'category' => $category,
+                    'message' => trim((string) $notification->message) !== '' ? trim((string) $notification->message) : 'Recommendation was sent to the parent.',
+                    'teacher_name' => $teacher->name ?? 'Teacher',
+                    'date_sent' => $notification->created_at?->translatedFormat('M d, Y') ?? now()->translatedFormat('M d, Y'),
+                    'status' => $status,
+                    'attendance_percentage' => $attendancePercentage,
+                    'absences' => $absentCount,
+                    'late_arrivals' => $lateCount,
+                    'grade' => $grade,
+                ];
+            })
+            ->values();
+    }
+
+    public function showRecommendation(StudentNotification $notification)
+    {
+        $teacher = Auth::user();
+        abort_unless($notification->teacher_id === $teacher->id, 403);
+
+        return view('teacher.recommendations.show', compact('notification'));
+    }
+
+    public function editRecommendation(StudentNotification $notification)
+    {
+        $teacher = Auth::user();
+        abort_unless($notification->teacher_id === $teacher->id, 403);
+
+        return view('teacher.recommendations.edit', compact('notification'));
+    }
+
+    public function updateRecommendation(Request $request, StudentNotification $notification)
+    {
+        $teacher = Auth::user();
+        abort_unless($notification->teacher_id === $teacher->id, 403);
+
+        $data = $request->validate([
+            'title' => 'required|string|max:255',
+            'message' => 'nullable|string|max:2000',
+        ]);
+
+        $notification->update($data);
+
+        return redirect()->route('teacher.recommendations')->with('success', 'Recommendation updated.');
+    }
+
+    public function destroyRecommendation(StudentNotification $notification)
+    {
+        $teacher = Auth::user();
+        abort_unless($notification->teacher_id === $teacher->id, 403);
+
+        $notification->delete();
+
+        return redirect()->route('teacher.recommendations')->with('success', 'Recommendation deleted.');
+    }
+
+    public function resendRecommendation(StudentNotification $notification)
+    {
+        $teacher = Auth::user();
+        abort_unless($notification->teacher_id === $teacher->id, 403);
+
+        StudentNotification::create([
+            'student_id' => $notification->student_id,
+            'teacher_id' => $notification->teacher_id,
+            'title' => $notification->title,
+            'message' => $notification->message,
+            'recipient' => $notification->recipient,
+        ]);
+
+        return redirect()->route('teacher.recommendations')->with('success', 'Recommendation resent to parent.');
+    }
+
+    public function recommendationData(StudentNotification $notification)
+    {
+        $teacher = Auth::user();
+        abort_unless($notification->teacher_id === $teacher->id, 403);
+
+        return response()->json([
+            'id' => $notification->id,
+            'title' => $notification->title,
+            'message' => $notification->message,
+        ]);
     }
 }

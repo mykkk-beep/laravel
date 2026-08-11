@@ -3,35 +3,39 @@
 @section('content')
 @php
     $teacherName = Auth::user()->name ?? 'Teacher';
-    $recommendationItems = $recommendations->map(function ($student) use ($teacherName) {
-        $attendanceRecords = $student->attendanceRecords ?? collect();
-        $absentCount = $attendanceRecords->where('status', 'absent')->count();
-        $lateCount = $attendanceRecords->where('status', 'late')->count();
-        $presentCount = $attendanceRecords->where('status', 'present')->count();
-        $attendancePercentage = $attendanceRecords->count() > 0
-            ? round(($presentCount / $attendanceRecords->count()) * 100)
-            : 100;
-        $grade = optional($student->enrollments()->where('status', \App\Models\Enrollment::STATUS_ENROLLED)->latest()->first())->grade;
-        $category = $absentCount >= 3 ? 'Attendance' : ($grade !== null && $grade < 75 ? 'Academic Performance' : 'Behavior');
-        $status = $absentCount >= 4 ? 'Viewed' : ($absentCount >= 2 ? 'Sent' : 'Draft');
-        $message = $absentCount >= 3
-            ? "Your child has had {$absentCount} absences this term and needs stronger attendance support at school."
-            : "We encourage continued support at home to help maintain steady academic progress and positive classroom behavior.";
+    $recommendationItems = ($recommendationItems ?? collect())->values();
 
-        return [
-            'student_name' => $student->name,
-            'class_name' => optional($student->classRoom)->name ?? 'Unassigned',
-            'category' => $category,
-            'message' => $message,
-            'teacher_name' => $teacherName,
-            'date_sent' => now()->subDays($absentCount > 0 ? $absentCount : 1)->translatedFormat('M d, Y'),
-            'status' => $status,
-            'attendance_percentage' => $attendancePercentage,
-            'absences' => $absentCount,
-            'late_arrivals' => $lateCount,
-            'grade' => $grade,
-        ];
-    })->values();
+    if ($recommendationItems->isEmpty()) {
+        $recommendationItems = $recommendations->map(function ($student) use ($teacherName) {
+            $attendanceRecords = $student->attendanceRecords ?? collect();
+            $absentCount = $attendanceRecords->where('status', 'absent')->count();
+            $lateCount = $attendanceRecords->where('status', 'late')->count();
+            $presentCount = $attendanceRecords->where('status', 'present')->count();
+            $attendancePercentage = $attendanceRecords->count() > 0
+                ? round(($presentCount / $attendanceRecords->count()) * 100)
+                : 100;
+            $grade = optional($student->enrollments()->where('status', \App\Models\Enrollment::STATUS_ENROLLED)->latest()->first())->grade;
+            $category = $absentCount >= 3 ? 'Attendance' : ($grade !== null && $grade < 75 ? 'Academic Performance' : 'Behavior');
+            $status = $absentCount >= 4 ? 'Viewed' : ($absentCount >= 2 ? 'Sent' : 'Draft');
+            $message = $absentCount >= 3
+                ? "Your child has had {$absentCount} absences this term and needs stronger attendance support at school."
+                : "We encourage continued support at home to help maintain steady academic progress and positive classroom behavior.";
+
+            return [
+                'student_name' => $student->name,
+                'class_name' => optional($student->classRoom)->name ?? 'Unassigned',
+                'category' => $category,
+                'message' => $message,
+                'teacher_name' => $teacherName,
+                'date_sent' => now()->subDays($absentCount > 0 ? $absentCount : 1)->translatedFormat('M d, Y'),
+                'status' => $status,
+                'attendance_percentage' => $attendancePercentage,
+                'absences' => $absentCount,
+                'late_arrivals' => $lateCount,
+                'grade' => $grade,
+            ];
+        })->values();
+    }
 @endphp
 
 <div x-data="{ open: false, message: 'Dear Parent/Guardian, your child has shown a decline in attendance over the past month, which may affect academic performance. We encourage regular attendance and a consistent daily routine. Working together can help improve learning outcomes.' }" class="space-y-6">
@@ -114,7 +118,16 @@
                                 <div class="flex flex-wrap items-center gap-2">
                                     <h3 class="text-lg font-semibold text-slate-900">{{ $item['student_name'] }}</h3>
                                     <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">{{ $item['class_name'] }}</span>
-                                    <span class="rounded-full px-3 py-1 text-xs font-semibold ring-1 {{ $statusStyles }}">{{ $item['status'] }}</span>
+                                    <span class="rounded-full px-3 py-1 text-xs font-semibold ring-1 {{ $statusStyles }}">
+                                        @if($item['status'] === 'Draft')
+                                            <span class="mr-1 inline-flex items-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M4.5 3.5A1.5 1.5 0 006 2h4.17a1.5 1.5 0 011.06.44l3.83 3.83A1.5 1.5 0 0115.5 7.5v8a1.5 1.5 0 01-1.5 1.5H6A1.5 1.5 0 014.5 15.5v-12zM7 5.75A.75.75 0 007 7.25h3.5A.75.75 0 0010.75 6H7zM7 9a.75.75 0 000 1.5h4.5A.75.75 0 0011.75 9H7zM7 12a.75.75 0 000 1.5h4.5A.75.75 0 0011.75 12H7z" />
+                                                </svg>
+                                            </span>
+                                        @endif
+                                        {{ $item['status'] }}
+                                    </span>
                                 </div>
                                 <p class="text-sm font-medium text-indigo-600">{{ $item['category'] }}</p>
                                 <p class="max-w-2xl text-sm leading-6 text-slate-600">{{ $item['message'] }}</p>
@@ -133,10 +146,17 @@
                         </div>
 
                         <div class="mt-5 flex flex-wrap gap-2">
-                            <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">View</button>
-                            <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">Edit</button>
-                            <button type="button" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100">Delete</button>
-                            <button type="button" class="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100">Resend</button>
+                            <a href="{{ route('teacher.recommendations.show', $item['id']) }}" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">View</a>
+                            <button type="button" data-id="{{ $item['id'] }}" class="edit-recommendation rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">Edit</button>
+                            <form method="POST" action="{{ route('teacher.recommendations.destroy', $item['id']) }}" onsubmit="return confirm('Delete this recommendation?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100">Delete</button>
+                            </form>
+                            <form method="POST" action="{{ route('teacher.recommendations.resend', $item['id']) }}" class="resend-form">
+                                @csrf
+                                <button type="submit" class="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100">Resend</button>
+                            </form>
                         </div>
                     </article>
                 @endforeach
@@ -174,15 +194,19 @@
                     </select>
                 </label>
                 <label class="block text-sm font-medium text-slate-700">
-                    <span class="mb-2 block">Parent information</span>
-                    <input type="text" value="(Parent/Guardian)" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none" readonly>
-                </label>
-                <label class="block text-sm font-medium text-slate-700">
                     <span class="mb-2 block">Category</span>
                     <select class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none">
                         <option>Attendance</option>
                         <option>Academic Performance</option>
                         <option>Behavior</option>
+                    </select>
+                </label>
+                <label class="block text-sm font-medium text-slate-700">
+                    <span class="mb-2 block">Priority level</span>
+                    <select name="priority_level" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none">
+                        <option value="Low">Low</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="High">High</option>
                     </select>
                 </label>
                 <label class="block text-sm font-medium text-slate-700">
@@ -192,14 +216,23 @@
             </div>
 
             <label class="mt-4 block text-sm font-medium text-slate-700">
-                <span class="mb-2 block">Recommendation message</span>
-                <textarea name="message" x-model="message" rows="5" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 outline-none" placeholder="Write a recommendation..."></textarea>
+                <span class="mb-2 block">Recommendation message for parent</span>
+                <textarea name="message" x-model="message" rows="5" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 outline-none" placeholder="Write a recommendation for the parent or guardian..."></textarea>
+            </label>
+
+            <label class="mt-4 block text-sm font-medium text-slate-700">
+                <span class="mb-2 block">Recommendation message for student</span>
+                <textarea name="student_message" rows="4" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 outline-none" placeholder="Write a separate message for the student..."></textarea>
             </label>
 
             <div class="mt-5 flex flex-wrap items-center gap-3">
                 <label class="flex items-center gap-2 text-sm text-slate-600">
-                    <input type="checkbox" checked class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" readonly>
+                    <input type="checkbox" name="send_to_parent" value="1" checked class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
                     <span>Send to parent</span>
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-600">
+                    <input type="checkbox" name="send_to_student" value="1" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                    <span>Send to student</span>
                 </label>
             </div>
 
@@ -231,4 +264,128 @@
         </script>
     </form>
 </div>
+
+<!-- Edit recommendation modal -->
+<div id="edit-modal" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
+    <form id="edit-form" method="POST" class="w-full max-w-3xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
+        @csrf
+        @method('PUT')
+        <input type="hidden" name="_method" value="PUT">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h3 class="text-xl font-semibold text-slate-900">Edit recommendation</h3>
+                <p class="mt-1 text-sm text-slate-500">Update the message sent to the parent.</p>
+            </div>
+            <button type="button" id="close-edit-modal" class="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">✕</button>
+        </div>
+
+        <label class="mt-4 block text-sm font-medium text-slate-700">
+            <span class="mb-2 block">Title</span>
+            <input type="text" name="title" id="edit-title" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none" required>
+        </label>
+
+        <label class="mt-4 block text-sm font-medium text-slate-700">
+            <span class="mb-2 block">Message</span>
+            <textarea name="message" id="edit-message" rows="6" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none"></textarea>
+        </label>
+
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" id="cancel-edit" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Cancel</button>
+            <button type="submit" id="save-edit" class="rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Save</button>
+        </div>
+    </form>
+</div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // CSRF from meta
+    const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    // Handle resend forms via AJAX
+    document.querySelectorAll('form.resend-form').forEach(form => {
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const btn = form.querySelector('button');
+            btn.disabled = true;
+            const action = form.getAttribute('action');
+
+            try {
+                const resp = await fetch(action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrf,
+                        'Accept': 'application/json',
+                    },
+                });
+
+                if (!resp.ok) throw new Error('Network error');
+
+                // show small success state
+                btn.innerText = 'Resent';
+                btn.classList.remove('border-indigo-200');
+                btn.classList.add('opacity-70');
+                setTimeout(() => { btn.disabled = false; btn.innerText = 'Resend'; btn.classList.remove('opacity-70'); }, 2000);
+            } catch (err) {
+                console.error(err);
+                btn.disabled = false;
+                alert('Failed to resend recommendation.');
+            }
+        });
+    });
+
+    // Edit-in-modal
+    const editModal = document.getElementById('edit-modal');
+    const editForm = document.getElementById('edit-form');
+    const editTitle = document.getElementById('edit-title');
+    const editMessage = document.getElementById('edit-message');
+
+    document.querySelectorAll('button.edit-recommendation').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const id = this.dataset.id;
+            try {
+                const res = await fetch(`{{ url('/teacher/recommendations') }}/${id}/data`, { headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' } });
+                if (!res.ok) throw new Error('Failed to fetch');
+                const data = await res.json();
+                editTitle.value = data.title || '';
+                editMessage.value = data.message || '';
+                editForm.setAttribute('action', `{{ url('/teacher/recommendations') }}/${id}`);
+                editModal.style.display = 'flex';
+            } catch (err) {
+                console.error(err);
+                alert('Unable to load recommendation for editing.');
+            }
+        });
+    });
+
+    document.getElementById('close-edit-modal').addEventListener('click', () => editModal.style.display = 'none');
+    document.getElementById('cancel-edit').addEventListener('click', () => editModal.style.display = 'none');
+
+    editForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const action = editForm.getAttribute('action');
+        const formData = new FormData(editForm);
+        try {
+            const res = await fetch(action, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                body: formData,
+            });
+
+            if (!res.ok) {
+                const json = await res.json().catch(()=>null);
+                throw new Error(json?.message || 'Failed to save');
+            }
+
+            // close and reload to reflect changes
+            editModal.style.display = 'none';
+            location.reload();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to save recommendation.');
+        }
+    });
+});
+</script>
+@endpush
 @endsection

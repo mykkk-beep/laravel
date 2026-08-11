@@ -55,13 +55,6 @@
                         <div class="mt-1 text-sm text-rose-600">{{ $message }}</div>
                     @enderror
                 </div>
-                <div>
-                    <label class="form-label">Mobile Number</label>
-                    <input type="text" name="mobile" class="form-input @error('mobile') border-rose-300 @enderror" value="{{ old('mobile', $student->mobile) }}" required>
-                    @error('mobile')
-                        <div class="mt-1 text-sm text-rose-600">{{ $message }}</div>
-                    @enderror
-                </div>
             </div>
 
             <div>

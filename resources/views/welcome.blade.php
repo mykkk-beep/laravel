@@ -1,26 +1,155 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>Laravel</title>
-    </head>
-    <body class="antialiased">
-        <div class="relative sm:flex sm:justify-center sm:items-center min-h-screen bg-dots-darker bg-center bg-gray-100 dark:bg-dots-lighter dark:bg-gray-900 selection:bg-red-500 selection:text-white">
-            @if (Route::has('login'))
-                <div class="sm:fixed sm:top-0 sm:right-0 p-6 text-right">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Smart Attendance</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+        }
+
+        .container {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            width: 400px;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .logo {
+            width: 55px;
+            height: 55px;
+            margin: 0 auto 15px;
+            background: #16a34a;
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        h1 {
+            font-size: 25px;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        p {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        a {
+            text-decoration: none;
+            padding: 11px 22px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .login {
+            background: #16a34a;
+            color: white;
+        }
+
+        .login:hover {
+            background: #15803d;
+        }
+
+        .register {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .register:hover {
+            background: #e5e7eb;
+        }
+
+        .dashboard {
+            background: #16a34a;
+            color: white;
+        }
+
+        .dashboard:hover {
+            background: #15803d;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="card">
+
+            <div class="logo">
+                ✓
+            </div>
+
+            <h1>SmartAttendance</h1>
+
+            <p>QR-based attendance management system</p>
+
+            <div class="buttons">
+
+                @if (Route::has('login'))
+
                     @auth
-                        <a href="{{ url('/dashboard') }}" class="font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Dashboard</a>
+
+                        <a href="{{ url('/dashboard') }}" class="dashboard">
+                            Dashboard
+                        </a>
+
                     @else
-                        <a href="{{ route('login') }}" class="font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Log in</a>
+
+                        <a href="{{ route('login') }}" class="login">
+                            Log in
+                        </a>
 
                         @if (Route::has('register'))
-                            <a href="{{ route('register') }}" class="ml-4 font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Register</a>
+                            <a href="{{ route('register') }}" class="register">
+                                Register
+                            </a>
                         @endif
+
                     @endauth
-                </div>
-            @endif
+
+                @endif
+
+            </div>
+
         </div>
-    </body>
+
+    </div>
+
+</body>
+
 </html>

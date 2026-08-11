@@ -135,6 +135,112 @@ class TeacherAttendanceScanTest extends TestCase
         $response->assertSee('student-selection-list');
     }
 
+    public function test_teacher_can_finalize_quick_attendance_for_the_selected_class(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+
+        $classRoom = ClassRoom::create([
+            'name' => 'History 101',
+            'classroom' => 'Room 3',
+            'date' => '2026-06-30',
+            'time' => '09:00',
+            'teacher_id' => $teacher->id,
+        ]);
+
+        $studentOne = Student::create([
+            'student_id' => 'ST-903',
+            'name' => 'Noah Green',
+            'sex' => 'male',
+            'mobile' => '1231231237',
+            'email' => 'noah@example.com',
+            'class_room_id' => $classRoom->id,
+        ]);
+
+        $studentTwo = Student::create([
+            'student_id' => 'ST-904',
+            'name' => 'Emma White',
+            'sex' => 'female',
+            'mobile' => '1231231238',
+            'email' => 'emma@example.com',
+            'class_room_id' => $classRoom->id,
+        ]);
+
+        $this->actingAs($teacher);
+
+        $this->postJson(route('teacher.attendance.initialize'), [
+            'class_room_id' => $classRoom->id,
+        ])->assertOk();
+
+        $this->postJson(route('teacher.attendance.record'), [
+            'class_room_id' => $classRoom->id,
+            'qr_code' => $studentOne->student_id,
+        ])->assertOk();
+
+        $response = $this->postJson(route('teacher.attendance.finalize-quick'), [
+            'class_room_id' => $classRoom->id,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('message', 'Quick attendance finalized for the selected class.')
+            ->assertJsonPath('summary.total', 2);
+
+        $this->assertDatabaseHas('attendance_records', [
+            'student_id' => $studentOne->id,
+            'class_room_id' => $classRoom->id,
+            'status' => 'present',
+            'date' => now()->toDateString(),
+        ]);
+
+        $this->assertDatabaseHas('attendance_records', [
+            'student_id' => $studentTwo->id,
+            'class_room_id' => $classRoom->id,
+            'status' => 'absent',
+            'date' => now()->toDateString(),
+        ]);
+    }
+
+    public function test_teacher_can_mark_all_students_present_for_the_selected_class(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+
+        $classRoom = ClassRoom::create([
+            'name' => 'Biology 101',
+            'classroom' => 'Room 4',
+            'date' => '2026-06-30',
+            'time' => '10:00',
+            'teacher_id' => $teacher->id,
+        ]);
+
+        $student = Student::create([
+            'student_id' => 'ST-905',
+            'name' => 'Olivia Hall',
+            'sex' => 'female',
+            'mobile' => '1231231239',
+            'email' => 'olivia@example.com',
+            'class_room_id' => $classRoom->id,
+        ]);
+
+        $this->actingAs($teacher);
+
+        $this->postJson(route('teacher.attendance.initialize'), [
+            'class_room_id' => $classRoom->id,
+        ])->assertOk();
+
+        $response = $this->postJson(route('teacher.attendance.mark-all-present'), [
+            'class_room_id' => $classRoom->id,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('message', 'All students marked present for the selected class.');
+
+        $this->assertDatabaseHas('attendance_records', [
+            'student_id' => $student->id,
+            'class_room_id' => $classRoom->id,
+            'status' => 'present',
+            'date' => now()->toDateString(),
+        ]);
+    }
+
     public function test_teacher_cannot_record_attendance_for_a_student_that_is_not_enrolled(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);

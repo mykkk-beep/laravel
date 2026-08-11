@@ -53,6 +53,10 @@
                         <h4 class="font-semibold text-slate-900">Quick Attendance</h4>
                         <p class="text-sm text-slate-500">Click a student below to mark attendance instantly.</p>
                     </div>
+                    <div class="mb-3 flex flex-wrap gap-2">
+                        <button id="mark-all-present" type="button" class="btn btn-success" style="display:none;">Mark all present</button>
+                        <button id="finalize-quick-attendance" type="button" class="btn btn-primary" style="display:none;">Mark the rest absent</button>
+                    </div>
                     <div id="student-selection-list" class="space-y-2"></div>
                 </div>
             </div>
@@ -90,8 +94,12 @@
     const manualForm = document.getElementById('manual-input-form');
     const manualInput = document.getElementById('manual_qr_code');
     const studentSelectionList = document.getElementById('student-selection-list');
+    const markAllPresentBtn = document.getElementById('mark-all-present');
+    const finalizeQuickAttendanceBtn = document.getElementById('finalize-quick-attendance');
     const initializeUrl = '{{ route('teacher.attendance.initialize') }}';
     const recordUrl = '{{ route('teacher.attendance.record') }}';
+    const markAllPresentUrl = '{{ route('teacher.attendance.mark-all-present') }}';
+    const finalizeQuickUrl = '{{ route('teacher.attendance.finalize-quick') }}';
     const token = document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]')?.value || '';
 
     let cameraRunning = false;
@@ -138,9 +146,16 @@
             </div>`;
     }
 
+    function setQuickAttendanceButtonsVisibility(classId) {
+        const hasClass = Boolean(classId);
+        markAllPresentBtn.style.display = hasClass ? 'inline-block' : 'none';
+        finalizeQuickAttendanceBtn.style.display = hasClass ? 'inline-block' : 'none';
+    }
+
     function renderStudentSelection(classId) {
         if (!classId) {
             studentSelectionList.innerHTML = '<p class="rounded-2xl border border-dashed border-slate-200 bg-white p-3 text-center text-sm text-slate-500">Select a class to see students.</p>';
+            setQuickAttendanceButtonsVisibility(classId);
             return;
         }
 
@@ -148,6 +163,7 @@
 
         if (!students.length) {
             studentSelectionList.innerHTML = '<p class="rounded-2xl border border-dashed border-slate-200 bg-white p-3 text-center text-sm text-slate-500">No students found for this class yet.</p>';
+            setQuickAttendanceButtonsVisibility(classId);
             return;
         }
 
@@ -173,6 +189,7 @@
         });
 
         studentSelectionList.appendChild(fragment);
+        setQuickAttendanceButtonsVisibility(classId);
     }
 
     function addToScansList(qrCode, label = 'Scan recorded') {
@@ -397,6 +414,82 @@
         }
     }
 
+    async function markAllPresent() {
+        const classId = classSelect.value;
+
+        if (!classId) {
+            setStatus('Please select a class first.', 'warning');
+            return;
+        }
+
+        try {
+            setStatus('Marking all students present...', 'warning');
+            const response = await fetch(markAllPresentUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ class_room_id: classId }),
+            });
+
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(payload.message || 'Unable to mark all students present.');
+            }
+
+            if (payload.summary) {
+                updateSummary(payload.summary);
+            }
+
+            showLatestResult(payload.message || 'All students marked present.', 'success');
+            setStatus('All students marked present for the selected class.', 'success');
+        } catch (error) {
+            showLatestResult(error.message, 'danger');
+            setStatus(`Quick attendance failed: ${error.message}`, 'danger');
+        }
+    }
+
+    async function finalizeQuickAttendance() {
+        const classId = classSelect.value;
+
+        if (!classId) {
+            setStatus('Please select a class first.', 'warning');
+            return;
+        }
+
+        try {
+            setStatus('Finalizing quick attendance...', 'warning');
+            const response = await fetch(finalizeQuickUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ class_room_id: classId }),
+            });
+
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(payload.message || 'Unable to finalize quick attendance.');
+            }
+
+            if (payload.summary) {
+                updateSummary(payload.summary);
+            }
+
+            showLatestResult(payload.message || 'Quick attendance finalized.', 'success');
+            setStatus('Quick attendance finalized. Remaining students are marked absent.', 'success');
+        } catch (error) {
+            showLatestResult(error.message, 'danger');
+            setStatus(`Quick attendance failed: ${error.message}`, 'danger');
+        }
+    }
+
     function onScanSuccess(decodedText) {
         processQRCode(decodedText);
     }
@@ -457,6 +550,8 @@
 
     startBtn.addEventListener('click', () => startCamera(selectedCameraId));
     stopBtn.addEventListener('click', () => stopCamera());
+    markAllPresentBtn.addEventListener('click', markAllPresent);
+    finalizeQuickAttendanceBtn.addEventListener('click', finalizeQuickAttendance);
 
     classSelect.addEventListener('change', () => {
         classInitialized = false;

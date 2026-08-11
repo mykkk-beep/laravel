@@ -12,7 +12,9 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $student = Student::with('classRoom')->findOrFail($request->session()->get('student_id'));
-        $notificationCount = StudentNotification::where('student_id', $student->id)->count();
+        $notificationCount = StudentNotification::where('student_id', $student->id)
+            ->where('recipient', 'student')
+            ->count();
 
         return view('student.dashboard', [
             'student' => $student,
@@ -24,7 +26,10 @@ class DashboardController extends Controller
     {
         $student = Student::findOrFail($request->session()->get('student_id'));
 
-        $notifications = StudentNotification::where('student_id', $student->id)->orderBy('created_at', 'desc')->get();
+        $notifications = StudentNotification::where('student_id', $student->id)
+            ->where('recipient', 'student')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return view('student.notifications', [
             'student' => $student,

@@ -21,6 +21,7 @@ class NotificationController extends Controller
             'teacher_id' => $request->user()->id ?? null,
             'title' => $data['title'],
             'message' => $data['message'],
+            'recipient' => 'guardian',
         ]);
 
         return back()->with('status', 'Notification sent');

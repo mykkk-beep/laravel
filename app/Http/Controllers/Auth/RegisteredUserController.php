@@ -40,12 +40,15 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => User::ROLE_TEACHER,
+            'active' => false,
+            'status' => User::STATUS_PENDING,
         ]);
 
         event(new Registered($user));
 
-        Auth::login($user);
+        Auth::logout();
 
-        return redirect(RouteServiceProvider::HOME);
+        return redirect()->route('login')->with('status', 'Registration successful. Your account is pending administrator approval.');
     }
 }

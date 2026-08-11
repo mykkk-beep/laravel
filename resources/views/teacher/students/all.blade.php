@@ -35,7 +35,6 @@
                         <th>Student ID</th>
                         <th>Name</th>
                         <th>Sex</th>
-                        <th>Mobile</th>
                         <th>Class</th>
                         <th>Actions</th>
                     </tr>
@@ -46,7 +45,6 @@
                             <td>{{ $student->student_id ?? '---' }}</td>
                             <td>{{ trim(implode(' ', array_filter([$student->name, $student->middle_name ?? '', $student->last_name ?? ''], fn ($value) => $value !== null && $value !== ''))) ?: $student->name }}</td>
                             <td>{{ ucfirst($student->sex ?? '---') }}</td>
-                            <td>{{ $student->mobile ?? '---' }}</td>
                             <td>{{ $student->classRoom->name ?? '---' }}</td>
                             <td>
                                 <div class="flex flex-wrap gap-2">

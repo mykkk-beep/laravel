@@ -30,15 +30,17 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $teacher = Auth::user();
-            $absentNotificationCount = AttendanceRecord::where('teacher_id', $teacher->id)
-                ->where('status', 'absent')
-                ->where('date', '>=', now()->subDays(7)->toDateString())
+            $absentNotificationCount = AttendanceRecord::whereHas('classRoom', function ($query) use ($teacher) {
+                $query->where('teacher_id', $teacher->id);
+            })->where('status', 'absent')
+                ->whereDate('date', '>=', now()->subDays(7)->toDateString())
                 ->distinct('student_id')
                 ->count('student_id');
 
             $pendingParentMessageCount = StudentNotification::where('teacher_id', $teacher->id)
-                ->whereNotNull('parent_reply')
-                ->whereNull('teacher_reply')
+                ->whereHas('latestReply', function ($query) {
+                    $query->where('sender', 'parent');
+                })
                 ->count();
 
             $view->with('absentNotificationCount', $absentNotificationCount)

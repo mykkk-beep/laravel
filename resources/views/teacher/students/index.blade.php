@@ -18,7 +18,6 @@
                 <th>Student ID</th>
                 <th>Name</th>
                 <th>Sex</th>
-                <th>Mobile</th>
                 <th>Email</th>
                 <th>QR Code</th>
                 <th class="text-center">Actions</th>
@@ -30,7 +29,6 @@
                     <td>{{ $student->student_id ?? '---' }}</td>
                     <td>{{ trim(implode(' ', array_filter([$student->name, $student->middle_name ?? '', $student->last_name ?? ''], fn ($value) => $value !== null && $value !== ''))) ?: ($student->name ?? '---') }}</td>
                     <td>{{ ucfirst($student->sex ?? '---') }}</td>
-                    <td>{{ $student->mobile ?? '---' }}</td>
                     <td>{{ $student->email ?? '---' }}</td>
                     <td>
                         <code>{{ $student->student_id }}</code>

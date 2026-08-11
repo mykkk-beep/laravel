@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('pageTitle', 'Attendance Records')
-@section('pageSubtitle', 'Review attendance activity and filter by class or status.')
+@section('pageTitle', 'Attendance Summary')
+@section('pageSubtitle', 'Review the selected attendance report details.')
 
 @section('content')
 <div class="flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
     <div>
-        <h2 class="text-2xl font-semibold text-slate-900">Attendance Records</h2>
-        <p class="mt-1 text-sm text-slate-500">View scanned records and filter them by date, class, or attendance status.</p>
+        <h2 class="text-2xl font-semibold text-slate-900">Attendance Summary</h2>
+        <p class="mt-1 text-sm text-slate-500">Generate and review attendance reports for the selected filters.</p>
     </div>
     <div class="flex flex-wrap gap-2">
         <a href="{{ route('teacher.attendance.report', request()->query()) }}" class="btn btn-primary">Generate Report</a>
@@ -46,7 +46,7 @@
 
 <div class="card">
     <div class="card-body">
-        <form method="GET" action="{{ route('teacher.attendance.records') }}" class="grid gap-3 md:grid-cols-4 md:items-end">
+        <form method="GET" action="{{ route('teacher.attendance.records') }}" class="grid gap-3 md:grid-cols-5 md:items-end">
             <div>
                 <label class="form-label">Class</label>
                 <select name="class_room_id" class="form-input">
@@ -57,14 +57,11 @@
                 </select>
             </div>
             <div>
-                <label class="form-label">Date</label>
-                <input type="date" name="date" class="form-input" value="{{ request('date') }}">
-            </div>
-            <div>
                 <label class="form-label">Status</label>
                 <select name="status" class="form-input">
                     <option value="">All statuses</option>
                     <option value="present" {{ request('status') == 'present' ? 'selected' : '' }}>Present</option>
+                    <option value="late" {{ request('status') == 'late' ? 'selected' : '' }}>Late</option>
                     <option value="absent" {{ request('status') == 'absent' ? 'selected' : '' }}>Absent</option>
                 </select>
             </div>
@@ -72,8 +69,63 @@
                 <button type="submit" class="btn btn-primary w-full">Filter</button>
             </div>
         </form>
+        @if(isset($weekDays))
+            <div class="mt-6 flex flex-wrap gap-2">
+                @foreach($weekDays as $day)
+                    <a href="{{ route('teacher.attendance.records', array_merge(request()->query(), ['date' => $day['date']])) }}" class="inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold transition {{ $day['is_selected'] ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50' }}">
+                        <span class="mr-2 font-semibold">{{ $day['label'] }}</span>
+                        <span>{{ $day['date'] }}</span>
+                    </a>
+                @endforeach
+            </div>
+        @endif
     </div>
 </div>
+
+@if(isset($studentStatuses) && $studentStatuses->isNotEmpty())
+    <div class="card">
+        <div class="card-body">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900">{{ $selectedClass?->name ?? 'Selected Class' }} — {{ \Carbon\Carbon::parse($selectedDate)->format('l, F j, Y') }}</h3>
+                    <p class="text-sm text-slate-500">Daily status for every student in the selected class.</p>
+                </div>
+                <div class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
+                    {{ $studentStatuses->count() }} students
+                </div>
+            </div>
+
+            <div class="mt-4 overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Student ID</th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($studentStatuses as $index => $status)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $status['student_id'] }}</td>
+                                <td>{{ $status['name'] }}</td>
+                                <td>
+                                    <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] {{ $status['status'] === 'present' ? 'bg-emerald-100 text-emerald-700' : ($status['status'] === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
+                                        {{ ucfirst($status['status']) }}
+                                    </span>
+                                </td>
+                                <td>{{ $status['notes'] ?? '—' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+@endif
 
 <div class="card">
     <div class="card-body">
@@ -89,7 +141,6 @@
                             <th>Class</th>
                             <th>QR Code</th>
                             <th>Status</th>
-                            <th>Notified</th>
                             <th>Scanned At</th>
                         </tr>
                     </thead>
@@ -101,7 +152,6 @@
                                 <td>{{ $record->student->classRoom->name }}</td>
                                 <td><code class="rounded bg-slate-100 px-2 py-1 text-xs">{{ $record->qr_code }}</code></td>
                                 <td>{{ ucfirst($record->status) }}</td>
-                                <td>{{ $record->notified ? 'Yes' : 'No' }}</td>
                                 <td>{{ $record->created_at->format('Y-m-d H:i:s') }}</td>
                             </tr>
                         @endforeach
