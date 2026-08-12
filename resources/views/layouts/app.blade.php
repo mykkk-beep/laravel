@@ -88,10 +88,6 @@
                                 </div>
 
                                 <div class="flex items-center gap-3">
-                                    <label class="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 md:flex">
-                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m21 21-4.35-4.35" stroke-linecap="round" /><circle cx="11" cy="11" r="5" /></svg>
-                                        <input type="text" placeholder="Search" class="w-28 bg-transparent outline-none placeholder:text-slate-400" />
-                                    </label>
 
                                     <a href="{{ route('teacher.notifications') }}" class="rounded-2xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm">🔔</a>
 
