@@ -38,7 +38,7 @@
     }
 @endphp
 
-<div x-data="{ open: false, message: 'Dear Parent/Guardian, your child has shown a decline in attendance over the past month, which may affect academic performance. We encourage regular attendance and a consistent daily routine. Working together can help improve learning outcomes.' }" class="space-y-6">
+<div x-data="{ open: false, message: '' }" class="space-y-6">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
             <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Recommendations</h1>

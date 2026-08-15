@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\NotificationReply;
 use App\Models\Student;
 use App\Models\StudentNotification;
 use Illuminate\Http\Request;
@@ -103,6 +104,7 @@ class StudentPortalController extends Controller
 
         $teacherMessages = StudentNotification::where('student_id', $student->id)
             ->where('recipient', 'student')
+            ->with('replies')
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -117,6 +119,38 @@ class StudentPortalController extends Controller
             'notifications' => $teacherMessages,
             'recentAttendance' => $recentAttendance,
         ]);
+    }
+
+    /**
+     * Add reply to notification
+     */
+    public function reply(Request $request, StudentNotification $notification)
+    {
+        $studentId = Session::get('student_id');
+
+        abort_unless($notification->student_id === $studentId, 403);
+
+        $data = $request->validate([
+            'reply' => 'required|string|max:1000',
+        ]);
+
+        $notification->addReply(NotificationReply::SENDER_PARENT, $data['reply']);
+
+        return redirect()->route('student.notifications')->with('success', 'Reply sent to your teacher.');
+    }
+
+    /**
+     * Delete notification
+     */
+    public function destroy(Request $request, StudentNotification $notification)
+    {
+        $studentId = Session::get('student_id');
+
+        abort_unless($notification->student_id === $studentId, 403);
+
+        $notification->delete();
+
+        return redirect()->route('student.notifications')->with('success', 'Notification deleted.');
     }
 
     /**

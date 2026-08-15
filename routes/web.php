@@ -60,6 +60,8 @@ Route::prefix('student')->name('student.')->group(function () {
     Route::middleware('student.authenticated')->group(function () {
         Route::get('/dashboard', [StudentPortalController::class, 'dashboard'])->name('dashboard');
         Route::get('/notifications', [StudentPortalController::class, 'notifications'])->name('notifications');
+        Route::post('/notifications/{notification}/reply', [StudentPortalController::class, 'reply'])->name('notifications.reply');
+        Route::delete('/notifications/{notification}', [StudentPortalController::class, 'destroy'])->name('notifications.destroy');
         Route::get('/profile', [StudentPortalController::class, 'profile'])->name('profile');
         Route::post('/logout', [StudentPortalController::class, 'logout'])->name('logout');
     });
