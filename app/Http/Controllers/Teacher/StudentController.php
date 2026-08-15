@@ -23,16 +23,38 @@ class StudentController extends Controller
         })));
     }
 
-    public function allStudents()
+    public function allStudents(Request $request)
     {
-        $teacherClassIds = Auth::user()->classes()->pluck('classes.id');
+        $search = trim((string) $request->input('search', ''));
+        $selectedClassId = $request->input('class_id');
 
-        $students = Student::with('classRoom')
-            ->whereIn('class_room_id', $teacherClassIds)
+        $teacherClasses = Auth::user()->classes()
             ->orderBy('name')
             ->get();
 
-        return view('teacher.students.all', compact('students'));
+        $classGroups = $teacherClasses->map(function (ClassRoom $classRoom) use ($search, $selectedClassId) {
+            if ($selectedClassId !== null && $selectedClassId !== '' && (string) $classRoom->id !== (string) $selectedClassId) {
+                return null;
+            }
+
+            $studentsQuery = $classRoom->students()
+                ->orderBy('name');
+
+            if ($search !== '') {
+                $studentsQuery->where(function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('student_id', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+
+            return [
+                'classRoom' => $classRoom,
+                'students' => $studentsQuery->get(),
+            ];
+        })->filter()->values();
+
+        return view('teacher.students.all', compact('classGroups', 'teacherClasses', 'selectedClassId', 'search'));
     }
 
     public function index(ClassRoom $classRoom)

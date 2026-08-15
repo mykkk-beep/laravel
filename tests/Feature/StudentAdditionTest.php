@@ -142,4 +142,58 @@ class StudentAdditionTest extends TestCase
             'mobile' => null,
         ]);
     }
+
+    public function test_manage_students_groups_by_class_and_has_search_controls(): void
+    {
+        $teacher = User::create([
+            'name' => 'Teacher One',
+            'email' => 'teacher@example.com',
+            'password' => bcrypt('password'),
+            'role' => User::ROLE_TEACHER,
+            'active' => true,
+        ]);
+
+        $mathClass = ClassRoom::create([
+            'name' => 'Math 101',
+            'classroom' => 'Room 1',
+            'date' => '2026-07-05',
+            'time' => '09:00',
+            'end_time' => '10:00',
+            'teacher_id' => $teacher->id,
+        ]);
+
+        $scienceClass = ClassRoom::create([
+            'name' => 'Science 201',
+            'classroom' => 'Room 2',
+            'date' => '2026-07-05',
+            'time' => '11:00',
+            'end_time' => '12:00',
+            'teacher_id' => $teacher->id,
+        ]);
+
+        Student::create([
+            'student_id' => 'S100',
+            'name' => 'Alice Johnson',
+            'sex' => 'female',
+            'class_room_id' => $mathClass->id,
+            'status' => 'pending',
+        ]);
+
+        Student::create([
+            'student_id' => 'S101',
+            'name' => 'Bob Smith',
+            'sex' => 'male',
+            'class_room_id' => $scienceClass->id,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($teacher)
+            ->get(route('teacher.students.all'))
+            ->assertOk()
+            ->assertSee('Manage Students')
+            ->assertSee('Math 101')
+            ->assertSee('Science 201')
+            ->assertSee('Search')
+            ->assertSee('All Classes');
+    }
 }
