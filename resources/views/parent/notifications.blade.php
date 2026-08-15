@@ -39,35 +39,47 @@
                         </form>
                     </div>
 
-                    <div class="border rounded-3 bg-white p-3" style="max-height: 280px; overflow-y: auto;">
-                        <div class="d-flex flex-column gap-3">
-                            <div class="d-flex justify-content-start">
-                                <div class="rounded-3 bg-primary text-black px-3 py-2" style="max-width: 75%; white-space: pre-wrap;">
-                                    <div class="small fw-semibold mb-1">Teacher</div>
-                                    <div>{{ $notification->message }}</div>
-                                    <div class="small text-black-50 mt-2">{{ $notification->created_at->format('M d, Y h:i A') }}</div>
+                    <div class="border rounded-lg bg-white p-3" style="max-height: 320px; overflow-y: auto;">
+                        <div class="flex flex-col gap-4">
+                            <div class="flex items-start gap-3">
+                                <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold">T</div>
+                                <div>
+                                    <div class="text-xs text-slate-500">{{ $notification->created_at->format('M d, Y h:i A') }}</div>
+                                    <div class="mt-1 inline-block rounded-xl bg-slate-100 text-slate-900 p-3 max-w-[75%] whitespace-pre-wrap">{{ $notification->message }}</div>
                                 </div>
                             </div>
 
                             @foreach($notification->replies as $reply)
-                                <div class="d-flex {{ $reply->sender === 'parent' ? 'justify-content-end' : 'justify-content-start' }}">
-                                    <div class="rounded-3 px-3 py-2 {{ $reply->sender === 'parent' ? 'bg-success text-black' : 'bg-primary text-black' }}" style="max-width: 75%; white-space: pre-wrap;">
-                                        <div class="small fw-semibold mb-1">{{ $reply->sender === 'parent' ? 'You' : 'Teacher' }}</div>
-                                        <div>{{ $reply->message }}</div>
-                                        <div class="small text-black-50 mt-2">{{ $reply->created_at->format('M d, Y h:i A') }}</div>
+                                @if($reply->sender === 'parent')
+                                    <div class="flex items-start justify-end gap-3">
+                                        <div class="flex flex-col items-end">
+                                            <div class="text-xs text-slate-500">{{ $reply->created_at->format('M d, Y h:i A') }}</div>
+                                            <div class="mt-1 inline-block rounded-xl bg-emerald-600 text-white p-3 max-w-[75%] whitespace-pre-wrap">{{ $reply->message }}</div>
+                                        </div>
+                                        <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-semibold">Y</div>
                                     </div>
-                                </div>
+                                @else
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold">T</div>
+                                        <div>
+                                            <div class="text-xs text-slate-500">{{ $reply->created_at->format('M d, Y h:i A') }}</div>
+                                            <div class="mt-1 inline-block rounded-xl bg-slate-100 text-slate-900 p-3 max-w-[75%] whitespace-pre-wrap">{{ $reply->message }}</div>
+                                        </div>
+                                    </div>
+                                @endif
                             @endforeach
                         </div>
                     </div>
                 </div>
 
-                <div class="mt-3 border-top pt-3">
+                <div class="mt-3 border-t pt-3">
                     <form method="POST" action="{{ route('parent.notifications.reply', $notification) }}">
                         @csrf
-                        <label for="reply-{{ $notification->id }}" class="form-label">Reply to teacher</label>
-                        <textarea id="reply-{{ $notification->id }}" name="reply" class="form-control" rows="3" placeholder="Write your reply here..." required></textarea>
-                        <button class="btn btn-sm btn-primary mt-3">Send reply</button>
+                        <label for="reply-{{ $notification->id }}" class="sr-only">Reply to teacher</label>
+                        <div class="flex gap-2 items-start">
+                            <textarea id="reply-{{ $notification->id }}" name="reply" class="form-control flex-1" rows="3" placeholder="Write your reply here..." required></textarea>
+                            <button class="btn btn-sm btn-primary">Send</button>
+                        </div>
                     </form>
                 </div>
             </div>

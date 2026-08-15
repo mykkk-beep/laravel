@@ -17,19 +17,20 @@
             <div class="card shadow-sm border-0">
                 <div class="card-body">
                     <h4 class="mb-3">Teacher messages</h4>
-                    <div class="list-group">
+                    <div class="space-y-4">
                         @forelse($notifications as $n)
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="border rounded-lg p-4 bg-white">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold">T</div>
                                     <div>
-                                        <strong>{{ $n->title }}</strong>
-                                        <div class="mt-2">{{ $n->message }}</div>
+                                        <div class="text-sm font-semibold">{{ $n->title }}</div>
+                                        <div class="text-xs text-slate-500">{{ $n->created_at->format('M d, Y h:i A') }}</div>
+                                        <div class="mt-2 inline-block rounded-xl bg-slate-100 text-slate-900 p-3 max-w-[75%] whitespace-pre-wrap">{{ $n->message }}</div>
                                     </div>
-                                    <small class="text-muted">{{ $n->created_at->diffForHumans() }}</small>
                                 </div>
                             </div>
                         @empty
-                            <div class="list-group-item">No teacher messages yet.</div>
+                            <div class="text-sm text-slate-500">No teacher messages yet.</div>
                         @endforelse
                     </div>
                 </div>
