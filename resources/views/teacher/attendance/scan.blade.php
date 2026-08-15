@@ -80,6 +80,14 @@
 </div>
 @endsection
 
+<style>
+    /* Mirror the front camera preview */
+    #reader video {
+        transform: scaleX(-1);
+        transform-origin: center;
+    }
+</style>
+
 @push('scripts')
 <script>
     let reader = null;
