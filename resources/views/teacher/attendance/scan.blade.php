@@ -277,58 +277,77 @@
     }
 
     async function populateCameras() {
-        try {
-            await ensureScannerReady();
-        } catch (error) {
-            cameraSelect.innerHTML = '<option value="">Scanner unavailable</option>';
+    try {
+        await ensureScannerReady();
+    } catch (error) {
+        cameraSelect.innerHTML = '<option value="">Scanner unavailable</option>';
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'none';
+
+        setStatus(
+            `The QR scanner library could not be loaded. ${error.message}`,
+            'warning'
+        );
+
+        return;
+    }
+
+    try {
+        const cameras = await window.Html5Qrcode.getCameras();
+
+        cameraSelect.innerHTML = '';
+
+        if (!cameras || cameras.length === 0) {
+            cameraSelect.innerHTML = '<option value="">No cameras found</option>';
             startBtn.style.display = 'none';
-            stopBtn.style.display = 'none';
-            setStatus(`The QR scanner library could not be loaded. ${error.message} If you are testing locally, use http://localhost and allow camera permission.`, 'warning');
+
+            setStatus('No camera found on this device.', 'danger');
+
             return;
         }
 
-        try {
-            const cameras = await window.Html5Qrcode.getCameras();
-            cameraSelect.innerHTML = '';
+        cameras.forEach((camera, index) => {
+            const option = document.createElement('option');
 
-            if (!cameras || cameras.length === 0) {
-                cameraSelect.innerHTML = '<option value="">No cameras found</option>';
-                startBtn.style.display = 'none';
-                setStatus('No camera found on this device.', 'danger');
-                return;
-            }
+            option.value = camera.id;
+            option.textContent = camera.label || `Camera ${index + 1}`;
 
-            cameras.forEach((camera, index) => {
-                const option = document.createElement('option');
-                option.value = camera.id;
-                option.textContent = camera.label || `Camera ${index + 1}`;
-                cameraSelect.appendChild(option);
-            });
+            cameraSelect.appendChild(option);
+        });
 
-            const ua = navigator.userAgent || '';
-            const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(ua);
+        /*
+         * Prefer FRONT camera
+         */
+        const frontCamera = cameras.find(camera =>
+            /front|user|facetime/i.test(camera.label || '')
+        );
 
-            let preferred = cameras.find(c => /back|rear|environment|wide/i.test(c.label)) || cameras[0];
-            selectedCameraId = preferred.id;
-            cameraSelect.value = selectedCameraId;
+        const preferredCamera = frontCamera || cameras[0];
 
-            if (isMobileDevice) {
-                try {
-                    await startCamera({ facingMode: 'environment' });
-                    return;
-                } catch (err) {
-                    // fallthrough to start with deviceId
-                }
-            }
+        selectedCameraId = preferredCamera.id;
+        cameraSelect.value = selectedCameraId;
 
-            await startCamera(selectedCameraId);
-        } catch (error) {
-            cameraSelect.innerHTML = '<option value="">Unable to list cameras</option>';
-            startBtn.style.display = 'inline-block';
-            stopBtn.style.display = 'none';
-            setStatus(`Unable to access camera: ${error.message}`, 'danger');
-        }
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+
+        setStatus(
+            'Front camera selected. Click "Start Camera" to begin.',
+            'info'
+        );
+
+    } catch (error) {
+        cameraSelect.innerHTML =
+            '<option value="">Unable to list cameras</option>';
+
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+
+        setStatus(
+            `Unable to access camera: ${error.message}`,
+            'danger'
+        );
     }
+}
 
     async function initializeAttendance(classId) {
         if (!classId || classInitialized) {
@@ -496,50 +515,122 @@
 
     const config = { fps: 10, qrbox: 250 };
 
+    let cameraStarting = false;
+
     async function startCamera(cameraId) {
-        if (!cameraId) {
-            setStatus('Please select a camera.', 'warning');
-            return;
+    if (!cameraId) {
+        setStatus('Please select a camera.', 'warning');
+        return;
+    }
+
+    // Prevent multiple start requests at the same time
+    if (cameraStarting || cameraRunning) {
+        return;
+    }
+
+    cameraStarting = true;
+
+    try {
+        await ensureScannerReady();
+
+        if (!reader) {
+            throw new Error('QR scanner could not be initialized.');
         }
 
-        try {
-            await ensureScannerReady();
-        } catch (error) {
-            setStatus(`The QR scanner library could not be loaded. ${error.message}`, 'warning');
-            return;
-        }
+        setStatus('Starting camera...', 'warning');
 
-        try {
-        await reader.stop().catch(() => {});
-        await reader.start(cameraId, config, onScanSuccess, () => {});
+        /*
+         * IMPORTANT:
+         * Do NOT call reader.stop() here.
+         *
+         * The previous code called stop() even when the scanner
+         * was not running, which caused:
+         *
+         * "Cannot stop, scanner is not running or paused."
+         */
+
+        await reader.start(
+            cameraId,
+            config,
+            onScanSuccess,
+            () => {}
+        );
+
         cameraRunning = true;
-        selectedCameraId = (typeof cameraId === 'string') ? cameraId : selectedCameraId;
+        selectedCameraId = cameraId;
+
         startBtn.style.display = 'none';
         stopBtn.style.display = 'inline-block';
-        setStatus('Camera started. Ready to scan.', 'info');
-        } catch (error) {
+
+        setStatus('Camera started. Ready to scan.', 'success');
+
+    } catch (error) {
         cameraRunning = false;
-        const message = error?.message || error?.name || String(error) || 'Unknown error';
+
+        const message =
+            error?.message ||
+            error?.name ||
+            String(error) ||
+            'Unknown camera error';
+
         console.error('Camera start failed:', error);
-        setStatus(`Unable to start camera: ${message}`, 'danger');
+
+        setStatus(
+            `Unable to start camera: ${message}`,
+            'danger'
+        );
+
         startBtn.style.display = 'inline-block';
         stopBtn.style.display = 'none';
-        }
+
+    } finally {
+        cameraStarting = false;
+    }
     }
 
-    async function stopCamera() {
-        try {
-            if (reader) {
-                await reader.stop();
-            }
-            cameraRunning = false;
-            startBtn.style.display = 'inline-block';
-            stopBtn.style.display = 'none';
-            setStatus('Camera stopped.', 'warning');
-        } catch (error) {
-            console.error('Error stopping camera:', error);
-        }
+
+async function stopCamera() {
+
+    // Nothing to stop
+    if (!reader || !cameraRunning) {
+        cameraRunning = false;
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+        return;
     }
+
+    try {
+
+        setStatus('Stopping camera...', 'warning');
+
+        await reader.stop();
+
+        cameraRunning = false;
+
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+
+        setStatus('Camera stopped.', 'warning');
+
+    } catch (error) {
+
+        console.error('Error stopping camera:', error);
+
+        /*
+         * Even if html5-qrcode reports an error while stopping,
+         * reset our state so the user can start the camera again.
+         */
+        cameraRunning = false;
+
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+
+        setStatus(
+            'Camera has been stopped or is no longer running.',
+            'warning'
+        );
+    }
+}
 
     cameraSelect.addEventListener('change', (event) => {
         selectedCameraId = event.target.value;
