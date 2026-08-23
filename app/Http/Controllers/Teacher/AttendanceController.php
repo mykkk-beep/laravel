@@ -103,19 +103,38 @@ class AttendanceController extends Controller
             ->whereDate('date', $date)
             ->whereIn('student_id', $studentIds)
             ->get()
-            ->keyBy('student_id');
+            ->groupBy('student_id');
 
         return $classRoom->students()
             ->orderBy('name')
             ->get()
             ->map(function (Student $student) use ($records) {
-                $record = $records->get($student->id);
+                $studentRecords = $records->get($student->id, collect());
+                $periodStatuses = ['am' => 'absent', 'pm' => 'absent'];
+
+                foreach ($studentRecords as $record) {
+                    $scanTime = $record->time_in
+                        ? Carbon::parse($record->time_in)
+                        : $record->created_at;
+                    $period = $scanTime && $scanTime->hour < 12 ? 'am' : 'pm';
+
+                    if ($periodStatuses[$period] === 'absent' || $record->status !== 'absent') {
+                        $periodStatuses[$period] = $record->status;
+                    }
+                }
+
+                $status = collect($periodStatuses)->contains(fn ($value) => $value !== 'absent')
+                    ? (collect($periodStatuses)->contains('late') ? 'late' : 'present')
+                    : 'absent';
+                $record = $studentRecords->first();
 
                 return [
                     'id' => $student->id,
                     'student_id' => $student->student_id,
                     'name' => $student->name,
-                    'status' => $record?->status ?? 'absent',
+                    'status' => $status,
+                    'am' => $periodStatuses['am'],
+                    'pm' => $periodStatuses['pm'],
                     'notes' => $record?->notes,
                 ];
             });

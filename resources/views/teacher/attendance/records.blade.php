@@ -4,7 +4,7 @@
 @section('pageSubtitle', 'Review the selected attendance report details.')
 
 @section('content')
-<div class="flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+<div class="no-print flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
     <div>
         <h2 class="text-2xl font-semibold text-slate-900">Attendance Summary</h2>
         <p class="mt-1 text-sm text-slate-500">Generate and review attendance reports for the selected filters.</p>
@@ -17,7 +17,7 @@
     </div>
 </div>
 
-<div class="grid gap-4 md:grid-cols-4">
+<div class="no-print grid gap-4 md:grid-cols-4">
     <div class="card">
         <div class="card-body">
             <div class="text-sm font-medium text-slate-500">Total Entries</div>
@@ -44,7 +44,7 @@
     </div>
 </div>
 
-<div class="card">
+<div class="no-print card">
     <div class="card-body">
         <form method="GET" action="{{ route('teacher.attendance.records') }}" class="grid gap-3 md:grid-cols-5 md:items-end">
             <div>
@@ -102,7 +102,8 @@
                             <th>#</th>
                             <th>Student ID</th>
                             <th>Name</th>
-                            <th>Status</th>
+                            <th>AM</th>
+                            <th>PM</th>
                             <th>Notes</th>
                         </tr>
                     </thead>
@@ -112,11 +113,13 @@
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $status['student_id'] }}</td>
                                 <td>{{ $status['name'] }}</td>
-                                <td>
-                                    <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] {{ $status['status'] === 'present' ? 'bg-emerald-100 text-emerald-700' : ($status['status'] === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
-                                        {{ ucfirst($status['status']) }}
-                                    </span>
-                                </td>
+                                @foreach(['am', 'pm'] as $period)
+                                    <td>
+                                        <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] {{ $status[$period] === 'present' ? 'bg-emerald-100 text-emerald-700' : ($status[$period] === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
+                                            {{ ucfirst($status[$period]) }}
+                                        </span>
+                                    </td>
+                                @endforeach
                                 <td>{{ $status['notes'] ?? '—' }}</td>
                             </tr>
                         @endforeach
@@ -127,7 +130,50 @@
     </div>
 @endif
 
-<div class="card">
+@if(isset($studentStatuses) && $studentStatuses->isNotEmpty())
+    <div class="print-only">
+        <h1>Attendance Report</h1>
+        <p>{{ $selectedClass?->name ?? 'Selected Class' }} — {{ \Carbon\Carbon::parse($selectedDate)->format('l, F j, Y') }}</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Student ID</th>
+                    <th>Student</th>
+                    <th>AM</th>
+                    <th>PM</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($studentStatuses as $index => $status)
+                    <tr>
+                        <td>{{ $index + 1 }}</td>
+                        <td>{{ $status['student_id'] }}</td>
+                        <td>{{ $status['name'] }}</td>
+                        <td>{{ ucfirst($status['am']) }}</td>
+                        <td>{{ ucfirst($status['pm']) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+@endif
+
+<style>
+    .print-only { display: none; }
+
+    @media print {
+        .no-print { display: none !important; }
+        .print-only { display: block; }
+        .print-only h1 { margin: 0 0 8px; }
+        .print-only p { margin: 0 0 20px; }
+        .print-only table { width: 100%; border-collapse: collapse; }
+        .print-only th, .print-only td { border: 1px solid #334155; padding: 8px; text-align: left; }
+        .print-only th { background: #e2e8f0; }
+    }
+</style>
+
+<div class="no-print card">
     <div class="card-body">
         @if($records->isEmpty())
             <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">No attendance records found.</div>

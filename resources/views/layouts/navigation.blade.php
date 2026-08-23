@@ -4,7 +4,6 @@
         <div class="flex justify-between items-center h-20">
             <div class="flex items-center gap-8">
                 <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-3">
-                    <x-application-logo class="block h-10 w-10 fill-current text-slate-900" />
                     <span class="text-lg font-semibold text-slate-900">{{ config('app.name', 'QR Attendance') }}</span>
                 </a>
 

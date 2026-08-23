@@ -19,6 +19,19 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 - [Robust background job processing](https://laravel.com/docs/queues).
 - [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
 
+## Deploying to Vercel
+
+This project includes a Vercel PHP entry point and Vite build configuration.
+
+1. Push the project to a Git provider and import it into Vercel.
+2. Set the Vercel build command to `npm run build` if it is not detected automatically.
+3. Add these environment variables in Vercel: `APP_KEY`, `APP_URL`, `APP_ENV=production`, `APP_DEBUG=false`, `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD`.
+4. Use a hosted database that is reachable from Vercel. XAMPP's `127.0.0.1` database is only available on the local machine.
+5. Set `SESSION_DRIVER=cookie`, `CACHE_DRIVER=array`, `LOG_CHANNEL=stderr`, and `FILESYSTEM_DISK=local` for the serverless runtime. Files written to the local filesystem are temporary; use object storage for persistent uploads.
+6. Run the migrations against the hosted database before using the application.
+
+Generate `APP_KEY` locally with `php artisan key:generate --show`, then add the value to Vercel. Never commit `.env` or production credentials.
+
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
 ## Learning Laravel
