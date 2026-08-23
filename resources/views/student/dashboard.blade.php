@@ -3,79 +3,74 @@
 @section('showNavigation', 'false')
 
 @section('content')
-<div class="container-fluid px-3 px-md-4 py-3 py-md-4">
-    <!-- Header Section -->
-    <div class="row mb-4 align-items-center">
-        <div class="col-12 col-md-6 mb-3 mb-md-0">
-            <h2 class="h3 h2-md mb-2">Student Portal</h2>
-            <p class="text-muted mb-0 text-truncate small">Welcome, {{ $student->name }} ({{ $student->student_id }})</p>
+<div class="mx-auto max-w-6xl px-1 py-2 sm:px-0">
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <p class="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">Student overview</p>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Student Portal</h1>
+            <p class="mt-1 text-sm text-slate-500">Welcome, {{ $student->name }} <span class="text-slate-400">({{ $student->student_id }})</span></p>
         </div>
-        <div class="col-12 col-md-6 d-flex flex-wrap gap-2 justify-content-md-end">
-            <a href="{{ route('student.notifications') }}" class="btn btn-sm btn-outline-primary position-relative flex-grow-1 flex-md-grow-0">
-                🔔 Notifications
+        <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <a href="{{ route('student.notifications') }}" class="relative inline-flex min-h-11 items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
+                <span aria-hidden="true">&#128276;</span><span class="ml-2">Notifications</span>
                 @if(!empty($notificationCount) && $notificationCount > 0)
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">{{ $notificationCount }}</span>
+                    <span class="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-xs font-bold text-white">{{ $notificationCount }}</span>
                 @endif
             </a>
-            <a href="{{ route('student.profile') }}" class="btn btn-sm btn-outline-secondary flex-grow-1 flex-md-grow-0">👤 Profile</a>
-            <form method="POST" action="{{ route('student.logout') }}" class="d-inline w-100 w-md-auto">
+            <a href="{{ route('student.profile') }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">Profile</a>
+            <form method="POST" action="{{ route('student.logout') }}" class="w-full sm:w-auto">
                 @csrf
-                <button class="btn btn-sm btn-outline-secondary w-100 w-md-auto">Logout</button>
+                <button class="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 sm:w-auto">Logout</button>
             </form>
         </div>
     </div>
 
-    <!-- Main Content Cards -->
-    <div class="row g-3 g-md-4">
-        <!-- Attendance Overview Card -->
-        <div class="col-12 col-lg-8 col-xl-7">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 p-md-4">
-                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                        <h4 class="mb-0 me-2">Attendance Overview</h4>
-                        <span class="badge bg-info text-dark">Latest updates</span>
+    <div class="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
+        <div class="card overflow-hidden">
+            <div class="border-b border-slate-100 bg-gradient-to-r from-slate-950 to-indigo-800 px-5 py-5 text-white sm:px-7">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-200">Attendance overview</p>
+                        <h2 class="mt-1 text-xl font-semibold">Your progress this term</h2>
                     </div>
+                    <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-indigo-100">Latest updates</span>
+                </div>
+            </div>
+            <div class="p-5 sm:p-7">
 
                     <!-- Stats Cards -->
-                    <div class="row g-2 g-md-3 mb-4">
-                        <div class="col-6 col-md-4">
-                            <div class="border rounded p-2 p-md-3 text-center h-100">
-                                <div class="small text-muted mb-2">Total Classes</div>
-                                <div class="fs-5 fs-4-md fw-bold">{{ $totalClasses }}</div>
+                    <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        <div class="rounded-2xl border border-slate-200 p-3 text-center sm:p-4">
+                                <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Total Classes</div>
+                                <div class="text-2xl font-bold text-slate-900">{{ $totalClasses }}</div>
                             </div>
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <div class="border rounded p-2 p-md-3 text-center h-100">
-                                <div class="small text-muted mb-2">Present</div>
-                                <div class="fs-5 fs-4-md fw-bold">{{ $presentCount }}</div>
+                        <div class="rounded-2xl border border-slate-200 p-3 text-center sm:p-4">
+                                <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Present</div>
+                                <div class="text-2xl font-bold text-slate-900">{{ $presentCount }}</div>
                             </div>
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <div class="border rounded p-2 p-md-3 text-center h-100">
-                                <div class="small text-muted mb-2">Attendance %</div>
-                                <div class="fs-5 fs-4-md fw-bold text-success">{{ $attendancePercentage }}%</div>
+                        <div class="col-span-2 rounded-2xl border border-indigo-100 bg-indigo-50 p-3 text-center sm:col-span-1 sm:p-4">
+                                <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-600">Attendance %</div>
+                                <div class="text-2xl font-bold text-indigo-700">{{ $attendancePercentage }}%</div>
                             </div>
-                        </div>
                     </div>
 
                     <!-- Attendance History -->
-                    <h6 class="fw-semibold mb-3 mt-4">Recent attendance history</h6>
-                    <div class="list-group list-group-flush">
+                    <h3 class="mb-3 text-sm font-semibold uppercase tracking-[0.08em] text-slate-500">Recent attendance history</h3>
+                    <div class="divide-y divide-slate-100">
                         @forelse($attendanceRecords as $record)
-                            <div class="list-group-item px-0 py-3">
-                                <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-                                    <div class="flex-grow-1">
-                                        <span class="fw-semibold d-block mb-1">{{ $record->created_at->format('M d, Y') }}</span>
-                                        <div class="small text-muted">{{ $record->classRoom?->name ?? 'No class recorded' }}</div>
+                            <div class="flex items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
+                                    <div class="min-w-0">
+                                        <span class="block font-semibold text-slate-900">{{ $record->created_at->format('M d, Y') }}</span>
+                                        <div class="text-sm text-slate-500">{{ $record->classRoom?->name ?? 'No class recorded' }}</div>
                                     </div>
-                                    <span class="badge bg-{{ $record->status === 'present' ? 'success' : ($record->status === 'late' ? 'warning' : 'danger') }} text-nowrap">
+                                    <span class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold {{ $record->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($record->status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
                                         {{ ucfirst($record->status) }}
                                     </span>
                                 </div>
                             </div>
                         @empty
-                            <div class="list-group-item px-0 py-3">
-                                <p class="text-muted mb-0">No attendance history yet.</p>
+                            <div class="py-4 text-sm text-slate-500">
+                                <p class="mb-0">No attendance history yet.</p>
                             </div>
                         @endforelse
                     </div>
@@ -83,22 +78,23 @@
             </div>
         </div>
 
-        <!-- Schedule Card -->
-        <div class="col-12 col-lg-4 col-xl-5">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-3 p-md-4">
-                    <h4 class="mb-4">Current Class Schedule</h4>
-                    <div class="list-group">
+        <div class="card h-fit overflow-hidden">
+            <div class="border-b border-slate-100 px-5 py-5 sm:px-6">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600">Your day</p>
+                <h2 class="mt-1 text-xl font-semibold text-slate-900">Current class schedule</h2>
+            </div>
+            <div class="p-5 sm:p-6">
+                    <div>
                         @if($student->classRoom)
-                            <div class="list-group-item px-0 py-3">
-                                <div class="d-flex justify-content-between align-items-start gap-2">
-                                    <div class="flex-grow-1">
-                                        <strong class="d-block mb-1">{{ $student->classRoom->name }}</strong>
-                                        <div class="text-muted small">{{ $student->classRoom->classroom ?? '' }}</div>
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <strong class="block text-slate-900">{{ $student->classRoom->name }}</strong>
+                                        <div class="mt-1 text-sm text-slate-500">{{ $student->classRoom->classroom ?? '' }}</div>
                                     </div>
-                                    <span class="badge bg-secondary text-nowrap">{{ $student->classRoom->date ?? '' }}</span>
+                                    <span class="shrink-0 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600">{{ $student->classRoom->date ?? '' }}</span>
                                 </div>
-                                <div class="small text-muted mt-2">
+                                <div class="mt-4 border-t border-slate-200 pt-3 text-sm text-slate-500">
                                     {{ $student->classRoom->time ?? '' }}
                                     @if(!empty($student->classRoom->end_time))
                                         - {{ $student->classRoom->end_time }}
@@ -106,8 +102,8 @@
                                 </div>
                             </div>
                         @else
-                            <div class="list-group-item px-0 py-3">
-                                <p class="text-muted mb-0">No schedule available.</p>
+                            <div class="rounded-2xl border border-dashed border-slate-200 p-5 text-sm text-slate-500">
+                                <p class="mb-0">No schedule available.</p>
                             </div>
                         @endif
                     </div>
@@ -117,30 +113,4 @@
     </div>
 </div>
 
-<style>
-    @media (max-width: 767.98px) {
-        .fs-4-md {
-            font-size: 1.25rem !important;
-        }
-        .h2-md {
-            font-size: 1.5rem !important;
-        }
-        .btn-sm {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.875rem;
-        }
-        .w-md-auto {
-            width: auto !important;
-        }
-    }
-    
-    @media (min-width: 768px) {
-        .fs-4-md {
-            font-size: 1.5rem !important;
-        }
-        .h2-md {
-            font-size: 2rem !important;
-        }
-    }
-</style>
 @endsection

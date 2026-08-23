@@ -96,7 +96,6 @@
                                 <thead class="bg-slate-50 text-xs uppercase tracking-[0.08em] text-slate-500">
                                     <tr>
                                         <th scope="col" class="px-4 py-3 font-semibold">Class Name</th>
-                                        <th scope="col" class="px-4 py-3 font-semibold">Subject</th>
                                         <th scope="col" class="hidden px-4 py-3 font-semibold lg:table-cell">Status</th>
                                         <th scope="col" class="hidden px-4 py-3 font-semibold lg:table-cell">Grade</th>
                                         <th scope="col" class="hidden px-4 py-3 font-semibold lg:table-cell">Date</th>
@@ -108,9 +107,6 @@
                                             <td class="px-4 py-3 align-top text-slate-900">
                                                 <strong class="block">{{ $enrollment->classRoom?->name ?? 'Unknown Class' }}</strong>
                                                 <span class="text-xs text-slate-500 lg:hidden">{{ $enrollment->subject?->name ?? 'Not assigned' }}</span>
-                                            </td>
-                                            <td class="hidden px-4 py-3 text-slate-500 lg:table-cell">
-                                                {{ $enrollment->subject?->name ?? 'Not assigned' }}
                                             </td>
                                             <td class="px-4 py-3">
                                                 <span class="badge badge-sm @if($enrollment->status === 'enrolled') bg-success @elseif($enrollment->status === 'pending') bg-warning text-dark @else bg-secondary @endif">
