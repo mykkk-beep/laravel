@@ -25,6 +25,7 @@ class Student extends Model
         'class_room_id',
         'uuid',
         'status',
+        'profile_picture',
     ];
 
     protected static function booted()

@@ -425,7 +425,7 @@ class AttendanceController extends Controller
                     return response()->json([
                         'message' => "Attendance already recorded for {$student->name} today.",
                         'status' => 'already_present',
-                        'student' => $student->only(['id', 'name', 'student_id']),
+                        'student' => $student->only(['id', 'name', 'student_id', 'profile_picture']),
                         'summary' => buildAttendanceSummary($classRoom->id, $todayDate),
                     ], 409);
                 }
@@ -445,7 +445,7 @@ class AttendanceController extends Controller
                 return response()->json([
                     'message' => "Attendance recorded for {$student->name}.",
                     'status' => 'present',
-                    'student' => $student->only(['id', 'name', 'student_id']),
+                    'student' => $student->only(['id', 'name', 'student_id', 'profile_picture']),
                     'summary' => buildAttendanceSummary($classRoom->id, $todayDate),
                 ]);
             }
@@ -468,7 +468,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'message' => "Attendance recorded for {$student->name}.",
                 'status' => 'present',
-                'student' => $student->only(['id', 'name', 'student_id']),
+                'student' => $student->only(['id', 'name', 'student_id', 'profile_picture']),
                 'summary' => buildAttendanceSummary($classRoom->id, $todayDate),
             ]);
         }

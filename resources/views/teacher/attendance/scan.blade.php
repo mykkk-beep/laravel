@@ -22,7 +22,27 @@
         </div>
 
         <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div>
+            <div class="sticky top-0 max-h-screen overflow-y-auto">
+                <!-- Student Info Card - Shows on successful scan -->
+                <div id="student-card" class="hidden mb-4 rounded-[24px] border-2 border-green-500 bg-gradient-to-br from-green-50 to-green-100 p-6 shadow-lg animate-in fade-in duration-300">
+                    <div class="flex flex-col items-center justify-center text-center">
+                        <!-- Profile Picture Avatar -->
+                        <div id="student-avatar" class="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-white shadow-lg">
+                            <span id="student-avatar-text" class="text-4xl font-bold"></span>
+                        </div>
+                        <!-- Student Name -->
+                        <h3 id="student-name" class="text-2xl font-bold text-slate-900"></h3>
+                        <!-- Student ID -->
+                        <p id="student-id" class="mt-2 text-sm text-slate-600"></p>
+                        <!-- Status Badge -->
+                        <div class="mt-4 inline-block rounded-full bg-green-500 px-4 py-2 text-white font-semibold">
+                            ✓ Present
+                        </div>
+                        <!-- Checkmark Animation -->
+                        <div class="mt-4 text-5xl animate-bounce">✓</div>
+                    </div>
+                </div>
+
                 <div class="overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50 p-2">
                     <div id="reader" style="width:100%; min-height:320px;"></div>
                 </div>
@@ -104,6 +124,11 @@
     const studentSelectionList = document.getElementById('student-selection-list');
     const markAllPresentBtn = document.getElementById('mark-all-present');
     const finalizeQuickAttendanceBtn = document.getElementById('finalize-quick-attendance');
+    const studentCard = document.getElementById('student-card');
+    const studentName = document.getElementById('student-name');
+    const studentId = document.getElementById('student-id');
+    const studentAvatar = document.getElementById('student-avatar');
+    const studentAvatarText = document.getElementById('student-avatar-text');
     const initializeUrl = '{{ route('teacher.attendance.initialize') }}';
     const recordUrl = '{{ route('teacher.attendance.record') }}';
     const markAllPresentUrl = '{{ route('teacher.attendance.mark-all-present') }}';
@@ -120,6 +145,63 @@
     function setStatus(message, type = 'info') {
         statusDiv.className = `alert alert-${type}`;
         statusDiv.innerHTML = message;
+    }
+
+    function playPresentSound() {
+        // Use Web Speech API to say "Present"
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance('Present');
+            utterance.rate = 1;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+            speechSynthesis.speak(utterance);
+        } else {
+            // Fallback: try to play a beep sound using Web Audio API
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                console.log('Audio notification not available');
+            }
+        }
+    }
+
+    function showStudentCard(name, studentId, initials, profilePicture = null) {
+        studentName.textContent = name;
+        studentId.textContent = `ID: ${studentId || 'N/A'}`;
+        
+        if (profilePicture) {
+            // If there's a profile picture, display it as background image
+            studentAvatar.innerHTML = '';
+            studentAvatar.style.backgroundImage = `url('${profilePicture}')`;
+            studentAvatar.style.backgroundSize = 'cover';
+            studentAvatar.style.backgroundPosition = 'center';
+        } else {
+            // Otherwise, show initials
+            studentAvatar.style.backgroundImage = 'none';
+            studentAvatarText.textContent = initials;
+            studentAvatar.innerHTML = `<span id="student-avatar-text" class="text-4xl font-bold">${initials}</span>`;
+        }
+        
+        studentCard.classList.remove('hidden');
+        
+        // Auto-hide the card after 3 seconds
+        setTimeout(() => {
+            studentCard.classList.add('hidden');
+        }, 3000);
     }
 
     function showLatestResult(message, type = 'secondary') {
@@ -428,11 +510,25 @@
                 throw new Error(payload.message || 'The scan could not be processed.');
             }
 
-            const studentName = payload.student?.name || 'Student';
-            showLatestResult(`Attendance marked as present for ${studentName}.`, 'success');
-            addToScansList(qrCodeValue, `Marked present: ${studentName}`);
+            const studentFullName = payload.student?.name || 'Student';
+            const studentIdValue = payload.student?.student_id || '';
+            const profilePicture = payload.student?.profile_picture || null;
+            
+            // Get initials from student name
+            const initials = studentFullName
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase())
+                .join('')
+                .substring(0, 2);
+            
+            // Show student card and play sound
+            showStudentCard(studentFullName, studentIdValue, initials, profilePicture);
+            playPresentSound();
+            
+            showLatestResult(`Attendance marked as present for ${studentFullName}.`, 'success');
+            addToScansList(qrCodeValue, `Marked present: ${studentFullName}`);
             manualInput.value = '';
-            setStatus(`Attendance recorded for ${studentName}.`, 'success');
+            setStatus(`Attendance recorded for ${studentFullName}.`, 'success');
         } catch (error) {
             showLatestResult(error.message, 'danger');
             setStatus(`Scan failed: ${error.message}`, 'danger');

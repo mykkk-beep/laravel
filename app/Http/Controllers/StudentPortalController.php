@@ -159,7 +159,7 @@ class StudentPortalController extends Controller
     public function profile()
     {
         $studentId = Session::get('student_id');
-        $student = Student::findOrFail($studentId);
+        $student = Student::with(['classRoom', 'enrollments.classRoom', 'enrollments.subject'])->findOrFail($studentId);
 
         return view('student.profile', ['student' => $student]);
     }
