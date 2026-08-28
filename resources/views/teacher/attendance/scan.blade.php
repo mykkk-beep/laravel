@@ -137,9 +137,16 @@
 
     let cameraRunning = false;
     let classInitialized = false;
+    let initializedClassId = null;
+    let initializationPromise = null;
+    let initializationClassId = null;
     let selectedCameraId = null;
     let isProcessing = false;
+    const scanQueue = [];
+    const queuedScanCodes = new Set();
+    const recentScanCodes = new Map();
     let scannerReady = false;
+    const duplicateScanWindow = 1500;
     const classStudents = @json($classStudents ?? []);
 
     function setStatus(message, type = 'info') {
@@ -440,40 +447,55 @@
 }
 
     async function initializeAttendance(classId) {
-        if (!classId || classInitialized) {
+        if (!classId || (classInitialized && initializedClassId === classId)) {
             return;
         }
 
-        setStatus('Initializing attendance for the selected class...', 'warning');
-
-        const response = await fetch(initializeUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': token,
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({ class_room_id: classId }),
-        });
-
-        const payload = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-            throw new Error(payload.message || 'Failed to initialize attendance');
+        if (initializationPromise && initializationClassId === classId) {
+            return initializationPromise;
         }
 
-        classInitialized = true;
-        if (payload.summary) {
-            updateSummary(payload.summary);
+        initializationClassId = classId;
+        initializationPromise = (async () => {
+            setStatus('Initializing attendance for the selected class...', 'warning');
+
+            const response = await fetch(initializeUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ class_room_id: classId }),
+            });
+
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(payload.message || 'Failed to initialize attendance');
+            }
+
+            if (classSelect.value === classId) {
+                classInitialized = true;
+                initializedClassId = classId;
+                if (payload.summary) {
+                    updateSummary(payload.summary);
+                }
+                setStatus('Attendance initialized. Scan student QR codes now.', 'success');
+            }
+        })();
+
+        try {
+            await initializationPromise;
+        } finally {
+            if (initializationClassId === classId) {
+                initializationPromise = null;
+                initializationClassId = null;
+            }
         }
-        setStatus('Attendance initialized. Scan student QR codes now.', 'success');
     }
 
     async function processQRCode(qrCodeValue) {
-        if (isProcessing) {
-            return;
-        }
-
         const classId = classSelect.value;
 
         if (!classId) {
@@ -481,11 +503,39 @@
             return;
         }
 
+        const normalizedQrCode = qrCodeValue.trim();
+        if (!normalizedQrCode || queuedScanCodes.has(normalizedQrCode)) {
+            return;
+        }
+
+        const lastScanAt = recentScanCodes.get(normalizedQrCode) || 0;
+        if (Date.now() - lastScanAt < duplicateScanWindow) {
+            return;
+        }
+
+        recentScanCodes.set(normalizedQrCode, Date.now());
+        queuedScanCodes.add(normalizedQrCode);
+        scanQueue.push({ classId, qrCodeValue: normalizedQrCode });
+        processScanQueue();
+    }
+
+    async function processScanQueue() {
+        if (isProcessing || scanQueue.length === 0) {
+            return;
+        }
+
+        const scan = scanQueue.shift();
+        queuedScanCodes.delete(scan.qrCodeValue);
+        if (scan.classId !== classSelect.value) {
+            processScanQueue();
+            return;
+        }
+
         try {
             isProcessing = true;
-            setStatus('Processing scan...', 'warning');
+            setStatus(`Processing scan (${scanQueue.length} waiting)...`, 'warning');
 
-            await initializeAttendance(classId);
+            await initializeAttendance(scan.classId);
 
             const response = await fetch(recordUrl, {
                 method: 'POST',
@@ -495,8 +545,8 @@
                     'Accept': 'application/json',
                 },
                 body: JSON.stringify({
-                    class_room_id: classId,
-                    qr_code: qrCodeValue,
+                    class_room_id: scan.classId,
+                    qr_code: scan.qrCodeValue,
                 }),
             });
 
@@ -526,7 +576,7 @@
             playPresentSound();
             
             showLatestResult(`Attendance marked as present for ${studentFullName}.`, 'success');
-            addToScansList(qrCodeValue, `Marked present: ${studentFullName}`);
+            addToScansList(scan.qrCodeValue, `Marked present: ${studentFullName}`);
             manualInput.value = '';
             setStatus(`Attendance recorded for ${studentFullName}.`, 'success');
         } catch (error) {
@@ -534,6 +584,7 @@
             setStatus(`Scan failed: ${error.message}`, 'danger');
         } finally {
             isProcessing = false;
+            processScanQueue();
         }
     }
 
@@ -614,10 +665,12 @@
     }
 
     function onScanSuccess(decodedText) {
-        processQRCode(decodedText);
+        processQRCode(decodedText).catch((error) => {
+            console.error('Unable to queue scan:', error);
+        });
     }
 
-    const config = { fps: 10, qrbox: 250 };
+    const config = { fps: 20, qrbox: { width: 300, height: 300 }, aspectRatio: 1.333334 };
 
     let cameraStarting = false;
 
@@ -750,9 +803,19 @@ async function stopCamera() {
 
     classSelect.addEventListener('change', () => {
         classInitialized = false;
+        initializedClassId = null;
+        scanQueue.length = 0;
+        queuedScanCodes.clear();
+        recentScanCodes.clear();
         attendanceSummary.innerHTML = '';
         renderStudentSelection(classSelect.value);
         setStatus('Class changed. Select the class and scan again.', 'info');
+
+        if (classSelect.value) {
+            initializeAttendance(classSelect.value).catch((error) => {
+                setStatus(`Unable to initialize attendance: ${error.message}`, 'danger');
+            });
+        }
     });
 
     manualForm.addEventListener('submit', (event) => {
