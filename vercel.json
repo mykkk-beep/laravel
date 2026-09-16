@@ -1,7 +1,6 @@
 {
     "version": 2,
     "buildCommand": "npm run build",
-    "outputDirectory": "public",
     "builds": [
         {
             "src": "api/index.php",
@@ -16,6 +15,10 @@
         {
             "src": "/build/(.*)",
             "dest": "/public/build/$1"
+        },
+        {
+            "src": "/(images|css|js|favicon\\.ico|manifest\\.json|robots\\.txt|offline\\.html|serviceworker\\.js|sw\\.js)(.*)",
+            "dest": "/public/$1$2"
         },
         {
             "src": "/(.*)",
