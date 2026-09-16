@@ -65,7 +65,7 @@ class TeacherController extends Controller
 
         $this->logActivity('teacher_created', 'Created teacher account', ['teacher_id' => $teacher->id, 'teacher_name' => $teacher->name]);
 
-        return redirect()->route('superadmin.teachers.index')->with('success', 'Teacher created successfully.');
+        return redirect()->route('superadmin.teachers.index')->with('success', 'Teacher added Successfully.');
     }
 
     public function edit(User $teacher)

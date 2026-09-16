@@ -1,6 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
+@if (session('success'))
+    <div class="alert alert-success" role="alert">
+        {{ session('success') }}
+    </div>
+@endif
+
 <div class="row g-4 mb-4">
     <div class="col-md-4">
         <div class="card shadow-sm border-0">
@@ -58,7 +64,7 @@
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Email</th>
+                <th>Username</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>

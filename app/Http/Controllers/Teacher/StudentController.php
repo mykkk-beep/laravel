@@ -37,7 +37,13 @@ class StudentController extends Controller
                 return null;
             }
 
-            $studentsQuery = $classRoom->students()
+            $studentsQuery = Student::query()
+                ->where(function ($query) use ($classRoom) {
+                    $query->where('class_room_id', $classRoom->id)
+                        ->orWhereHas('enrollments', function ($enrollments) use ($classRoom) {
+                            $enrollments->where('class_room_id', $classRoom->id);
+                        });
+                })
                 ->orderBy('name');
 
             if ($search !== '') {
@@ -61,7 +67,13 @@ class StudentController extends Controller
     {
         abort_unless($classRoom->teacher_id === Auth::id(), 403);
 
-        $students = $classRoom->students()
+        $students = Student::query()
+            ->where(function ($query) use ($classRoom) {
+                $query->where('class_room_id', $classRoom->id)
+                    ->orWhereHas('enrollments', function ($enrollments) use ($classRoom) {
+                        $enrollments->where('class_room_id', $classRoom->id);
+                    });
+            })
             ->orderBy('name')
             ->get();
 
@@ -118,13 +130,14 @@ class StudentController extends Controller
             'mobile' => $data['mobile'] ?? null,
             'email' => $data['email'] ?? null,
             'class_room_id' => $classRoomId,
-            'status' => $classRoomId ? 'pending' : 'not_enrolled',
+            'status' => $classRoomId ? Student::STATUS_ENROLLED : Student::STATUS_NOT_ENROLLED,
         ]);
 
         if ($classRoomId) {
             $student->enrollments()->create([
                 'class_room_id' => $classRoomId,
-                'status' => 'pending',
+                'status' => Enrollment::STATUS_ENROLLED,
+                'grade' => 0,
             ]);
         }
 
@@ -155,12 +168,13 @@ class StudentController extends Controller
             'mobile' => $data['mobile'] ?? null,
             'email' => $data['email'] ?? null,
             'class_room_id' => $classRoom->id,
-            'status' => 'pending',
+            'status' => Student::STATUS_ENROLLED,
         ]);
 
         $student->enrollments()->create([
             'class_room_id' => $classRoom->id,
-            'status' => 'pending',
+            'status' => Enrollment::STATUS_ENROLLED,
+            'grade' => 0,
         ]);
 
         return redirect()->route('teacher.classes.students.index', $classRoom)

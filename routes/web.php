@@ -104,6 +104,7 @@ Route::middleware(['auth', 'role:teacher'])->group(function () {
     Route::get('/teacher/classes', [TeacherClassController::class, 'index'])->name('teacher.classes.index');
     Route::get('/teacher/classes/create', [TeacherClassController::class, 'create'])->name('teacher.classes.create');
     Route::post('/teacher/classes', [TeacherClassController::class, 'store'])->name('teacher.classes.store');
+    Route::get('/teacher/classes/{classRoom}/duplicate', [TeacherClassController::class, 'create'])->name('teacher.classes.duplicate');
     Route::get('/teacher/classes/{classRoom}/edit', [TeacherClassController::class, 'edit'])->name('teacher.classes.edit');
     Route::put('/teacher/classes/{classRoom}', [TeacherClassController::class, 'update'])->name('teacher.classes.update');
     Route::delete('/teacher/classes/{classRoom}', [TeacherClassController::class, 'destroy'])->name('teacher.classes.destroy');

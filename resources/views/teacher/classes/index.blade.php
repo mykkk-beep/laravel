@@ -18,7 +18,7 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Name</th>
+                        <th>Class Name</th>
                         <th>Classroom</th>
                         <th>Date</th>
                         <th>Time</th>
@@ -43,6 +43,7 @@
                             <td>
                                 <div class="flex flex-wrap gap-2" role="group">
                                     <a class="btn btn-sm btn-primary" href="{{ route('teacher.classes.students.index', $class) }}">Students</a>
+                                    <a class="btn btn-sm btn-success" href="{{ route('teacher.classes.duplicate', ['classRoom' => $class, 'copy_from' => $class->id]) }}">Duplicate &amp; Change Schedule</a>
                                     <a class="btn btn-sm btn-secondary" href="{{ route('teacher.classes.edit', $class) }}">Edit</a>
                                     <form method="POST" action="{{ route('teacher.classes.destroy', $class) }}" onsubmit="return confirm('Delete this class?');">
                                         @csrf

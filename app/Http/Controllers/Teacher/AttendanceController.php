@@ -98,14 +98,20 @@ class AttendanceController extends Controller
             return collect();
         }
 
-        $studentIds = $classRoom->students()->pluck('id');
+        $studentsQuery = Student::query()->where(function ($query) use ($classRoom) {
+            $query->where('class_room_id', $classRoom->id)
+                ->orWhereHas('enrollments', function ($enrollments) use ($classRoom) {
+                    $enrollments->where('class_room_id', $classRoom->id);
+                });
+        });
+        $studentIds = (clone $studentsQuery)->pluck('id');
         $records = AttendanceRecord::where('class_room_id', $classRoom->id)
             ->whereDate('date', $date)
             ->whereIn('student_id', $studentIds)
             ->get()
             ->groupBy('student_id');
 
-        return $classRoom->students()
+        return $studentsQuery
             ->orderBy('name')
             ->get()
             ->map(function (Student $student) use ($records) {
@@ -403,7 +409,12 @@ class AttendanceController extends Controller
 
         $qrCode = trim($data['qr_code']);
 
-        $student = Student::where('class_room_id', $classRoom->id)
+        $student = Student::where(function ($query) use ($classRoom) {
+                $query->where('class_room_id', $classRoom->id)
+                    ->orWhereHas('enrollments', function ($enrollments) use ($classRoom) {
+                        $enrollments->where('class_room_id', $classRoom->id);
+                    });
+            })
             ->where(function ($query) use ($qrCode) {
                 $query->where('student_id', $qrCode)
                     ->orWhere('uuid', $qrCode);

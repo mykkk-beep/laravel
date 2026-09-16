@@ -22,7 +22,7 @@
                 <label class="form-label">Day of the Week</label>
                 <select name="day_of_week" class="form-input" required>
                     @foreach(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] as $day)
-                        <option value="{{ $day }}" {{ old('day_of_week') === $day ? 'selected' : '' }}>{{ $day }}</option>
+                        <option value="{{ $day }}" {{ old('day_of_week', $classRoom->date ? \Carbon\Carbon::parse($classRoom->date)->format('l') : '') === $day ? 'selected' : '' }}>{{ $day }}</option>
                     @endforeach
                 </select>
                 <div class="mt-2 text-sm text-slate-500">Select the day to recalculate the next date for this class.</div>

@@ -8,6 +8,7 @@ use App\Models\Enrollment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ClassController extends Controller
 {
@@ -24,9 +25,16 @@ class ClassController extends Controller
         return view('teacher.classes.index', compact('classes'));
     }
 
-    public function create()
+    public function create(Request $request, ?ClassRoom $classRoom = null)
     {
-        return view('teacher.classes.create');
+        $sourceClass = $classRoom;
+
+        if (! $sourceClass && $request->filled('copy_from')) {
+            $sourceClass = Auth::user()->classes()
+                ->findOrFail($request->integer('copy_from'));
+        }
+
+        return view('teacher.classes.create', compact('sourceClass'));
     }
 
     public function store(Request $request)
@@ -37,6 +45,7 @@ class ClassController extends Controller
             'day_of_week' => ['required', 'in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],
             'time' => ['required', 'date_format:H:i'],
             'end_time' => ['nullable', 'date_format:H:i'],
+            'copy_from' => ['nullable', 'integer'],
         ]);
 
         $data['date'] = Carbon::now()->next($data['day_of_week'])->toDateString();
@@ -46,9 +55,51 @@ class ClassController extends Controller
             return back()->withErrors(['end_time' => 'End time must be after start time.'])->withInput();
         }
 
-        Auth::user()->classes()->create($data);
+        $sourceClassId = $data['copy_from'] ?? null;
+        unset($data['copy_from']);
 
-        return redirect()->route('teacher.classes.index')->with('success', 'Class created successfully.');
+        $classRoom = DB::transaction(function () use ($data, $sourceClassId) {
+            $classRoom = Auth::user()->classes()->create($data);
+
+            if (! $sourceClassId) {
+                return $classRoom;
+            }
+
+            $sourceClass = Auth::user()->classes()
+                ->with('enrollments')
+                ->findOrFail($sourceClassId);
+
+            foreach ($sourceClass->enrollments as $enrollment) {
+                $classRoom->enrollments()->firstOrCreate(
+                    ['student_id' => $enrollment->student_id],
+                    [
+                        'status' => $enrollment->status,
+                        'grade' => 0,
+                    ]
+                );
+            }
+
+            // Support older classes created before enrollments were introduced.
+            foreach ($sourceClass->students()->whereDoesntHave('enrollments', function ($query) use ($sourceClass) {
+                $query->where('class_room_id', $sourceClass->id);
+            })->get() as $student) {
+                $classRoom->enrollments()->firstOrCreate(
+                    ['student_id' => $student->id],
+                    [
+                        'status' => $student->status === 'not_enrolled' ? 'not_enrolled' : 'enrolled',
+                        'grade' => 0,
+                    ]
+                );
+            }
+
+            return $classRoom;
+        });
+
+        $message = $sourceClassId
+            ? 'Class duplicated with the same students. Update its schedule as needed.'
+            : 'Class created successfully.';
+
+        return redirect()->route('teacher.classes.index')->with('success', $message);
     }
 
 

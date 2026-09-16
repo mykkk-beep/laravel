@@ -71,14 +71,8 @@
                     <label class="form-label">Status</label>
                     <select name="status" class="form-input">
                         <option value="pending" {{ old('status', 'pending') == 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="enrolled" {{ old('status') == 'enrolled' ? 'selected' : '' }}>Enrolled</option>
-                        <option value="not_enrolled" {{ old('status') == 'not_enrolled' ? 'selected' : '' }}>Not Enrolled</option>
                     </select>
                 </div>
-            </div>
-            <div>
-                <label class="form-label">Email</label>
-                <input type="email" name="email" class="form-input" value="{{ old('email') }}">
             </div>
             <div class="flex flex-wrap gap-3">
                 <button class="btn btn-primary" type="submit">Save Student</button>

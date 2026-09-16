@@ -53,6 +53,39 @@ class StudentEnrollmentTest extends TestCase
         $this->assertSame('enrolled', $enrollment->status);
     }
 
+    public function test_teacher_can_add_student_to_a_class_and_enroll_them_immediately(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+
+        $classRoom = ClassRoom::create([
+            'name' => 'English 101',
+            'classroom' => 'Room 7',
+            'date' => '2026-07-09',
+            'time' => '11:00',
+            'teacher_id' => $teacher->id,
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('teacher.classes.students.store', $classRoom), [
+                'student_id' => 'ST-300',
+                'name' => 'Mia Shaw',
+                'sex' => 'female',
+                'mobile' => '3334445555',
+                'email' => 'mia@example.com',
+            ])
+            ->assertRedirect(route('teacher.classes.students.index', $classRoom));
+
+        $student = Student::where('student_id', 'ST-300')->firstOrFail();
+
+        $this->assertSame('enrolled', $student->status);
+        $this->assertSame($classRoom->id, $student->class_room_id);
+        $this->assertDatabaseHas('enrollments', [
+            'student_id' => $student->id,
+            'class_room_id' => $classRoom->id,
+            'status' => 'enrolled',
+        ]);
+    }
+
     public function test_teacher_can_bulk_enroll_all_students_in_a_class(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
