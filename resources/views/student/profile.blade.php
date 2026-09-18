@@ -44,18 +44,6 @@
                         <strong>Primary Class:</strong>
                         <p class="mb-0 text-sm text-slate-500">{{ $student->classRoom?->name ?? 'Not assigned' }}</p>
                     </div>
-                    <div class="info-group">
-                        <strong>Enrollment Status:</strong>
-                        <p class="mb-0">
-                            <span class="badge @if($student->status === 'enrolled') bg-success @elseif($student->status === 'pending') bg-warning @else bg-danger @endif">
-                                {{ ucfirst($student->status ?? 'Not specified') }}
-                            </span>
-                        </p>
-                    </div>
-                    <div class="info-group">
-                        <strong>Total Enrollments:</strong>
-                        <p class="mb-0"><span class="badge bg-indigo-100 text-indigo-700">{{ $student->enrollments->count() }}</span></p>
-                    </div>
                     </div>
                 </div>
             </div>
