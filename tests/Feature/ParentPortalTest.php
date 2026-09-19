@@ -97,6 +97,22 @@ class ParentPortalTest extends TestCase
         $this->assertDatabaseMissing('student_notifications', ['id' => $notification->id]);
     }
 
+    public function test_parent_can_logout_and_clear_their_session(): void
+    {
+        $student = Student::create([
+            'student_id' => 'STU-004',
+            'name' => 'Dana Johnson',
+            'status' => Student::STATUS_ENROLLED,
+        ]);
+
+        $response = $this->withSession(['parent_student_id' => $student->id, 'previous_page' => '/parent/dashboard'])
+            ->post(route('parent.logout'));
+
+        $response->assertRedirect(route('parent.login'));
+        $this->assertFalse(session()->has('parent_student_id'));
+        $this->assertFalse(session()->has('previous_page'));
+    }
+
     public function test_parent_dashboard_shows_recent_attendance_and_teacher_notifications(): void
     {
         $teacher = User::factory()->create();

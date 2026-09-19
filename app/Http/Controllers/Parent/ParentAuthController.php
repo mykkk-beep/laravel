@@ -31,7 +31,9 @@ class ParentAuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->session()->forget('parent_student_id');
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()->route('parent.login');
     }
 }
