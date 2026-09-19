@@ -70,7 +70,7 @@
                 <div>
                     <label class="form-label">Status</label>
                     <select name="status" class="form-input">
-                        <option value="pending" {{ old('status', 'pending') == 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="pending" {{ old('status', 'pending') == 'pending' ? 'selected' : '' }}>Enrolled</option>
                     </select>
                 </div>
             </div>

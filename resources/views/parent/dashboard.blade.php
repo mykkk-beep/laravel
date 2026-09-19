@@ -46,12 +46,12 @@
                 <!-- Today's Attendance Status -->
                 @if($attendance)
                     <div class="mb-6 rounded-xl border-2 p-4 {{ $attendance->status === 'present' ? 'border-emerald-200 bg-emerald-50' : ($attendance->status === 'late' ? 'border-amber-200 bg-amber-50' : 'border-rose-200 bg-rose-50') }}">
-                        <div class="flex items-center justify-between gap-2 mb-2">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                             <span class="font-bold text-sm sm:text-base {{ $attendance->status === 'present' ? 'text-emerald-900' : ($attendance->status === 'late' ? 'text-amber-900' : 'text-rose-900') }}">
                                 Today: <span class="uppercase tracking-wide">{{ ucfirst($attendance->status) }}</span>
                             </span>
                             <span class="text-xs {{ $attendance->status === 'present' ? 'text-emerald-700' : ($attendance->status === 'late' ? 'text-amber-700' : 'text-rose-700') }}">
-                                {{ $attendance->time_in ?? $attendance->updated_at->format('H:i') }}
+                                {{ $attendance->time_in ? \Carbon\Carbon::parse($attendance->time_in)->format('g:i A') : $attendance->updated_at->format('g:i A') }}
                             </span>
                         </div>
                         @if($attendance->notes)
@@ -75,7 +75,7 @@
                             <div class="flex items-center justify-between gap-2 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
                                 <div class="min-w-0">
                                     <span class="block text-xs sm:text-sm font-semibold text-slate-900">{{ \Carbon\Carbon::parse($record->date)->format('M d, Y') }}</span>
-                                    <div class="text-xs text-slate-500">{{ $record->time_in ?? 'No time recorded' }}</div>
+                                    <div class="text-xs text-slate-500">{{ $record->time_in ? \Carbon\Carbon::parse($record->time_in)->format('g:i A') : 'No time recorded' }}</div>
                                 </div>
                                 <span class="shrink-0 rounded-full px-2 sm:px-3 py-1 text-xs font-semibold whitespace-nowrap {{ $record->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($record->status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
                                     {{ ucfirst($record->status) }}
@@ -112,9 +112,9 @@
                         <div class="border-t border-slate-200 pt-3">
                             <div class="text-xs text-slate-600">
                                 <span class="font-semibold">Time:</span>
-                                {{ $student->classRoom->time ?? '—' }}
+                                {{ $student->classRoom->time ? \Carbon\Carbon::parse($student->classRoom->time)->format('g:i A') : '—' }}
                                 @if(!empty($student->classRoom->end_time))
-                                    <span class="text-slate-400">to</span> {{ $student->classRoom->end_time }}
+                                    <span class="text-slate-400">to</span> {{ \Carbon\Carbon::parse($student->classRoom->end_time)->format('g:i A') }}
                                 @endif
                             </div>
                         </div>

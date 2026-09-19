@@ -12,7 +12,7 @@
         </div>
         <div class="flex flex-wrap gap-2">
             <a class="btn btn-primary" href="{{ route('teacher.attendance.scan') }}">Scan Attendance</a>
-            <a class="btn btn-success" href="{{ route('teacher.students.create') }}">Add Student</a>
+            <a class="btn btn-success" href="{{ route('teacher.classes.create') }}">Add Class</a>
             <a class="btn btn-outline-secondary" href="{{ route('teacher.attendance.records') }}">View History</a>
         </div>
     </div>
@@ -79,7 +79,7 @@
                                 <span class="font-semibold text-slate-900">{{ $activity->student->name ?? 'Unknown student' }}</span>
                                 <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] {{ $activity->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($activity->status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700') }}">{{ ucfirst($activity->status) }}</span>
                             </div>
-                            <div class="mt-1 text-sm text-slate-500">{{ $activity->date }} • {{ $activity->time_in ?? '—' }}</div>
+                            <div class="mt-1 text-sm text-slate-500">{{ $activity->date }} • {{ $activity->time_in ? \Carbon\Carbon::parse($activity->time_in)->format('g:i A') : '—' }}</div>
                         </li>
                     @empty
                         <li class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">No recent attendance activity.</li>
@@ -100,7 +100,7 @@
                                 <strong class="text-slate-900">{{ $class->name }}</strong>
                                 <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700">{{ $class->date }}</span>
                             </div>
-                            <div class="mt-1 text-sm text-slate-500">{{ $class->classroom }} • {{ $class->time }}{{ $class->end_time ? ' - '.$class->end_time : '' }}</div>
+                            <div class="mt-1 text-sm text-slate-500">{{ $class->classroom }} • {{ $class->time ? \Carbon\Carbon::parse($class->time)->format('g:i A') : '—' }}{{ $class->end_time ? ' - '.\Carbon\Carbon::parse($class->end_time)->format('g:i A') : '' }}</div>
                         </li>
                     @empty
                         <li class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">No upcoming classes.</li>

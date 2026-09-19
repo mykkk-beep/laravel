@@ -34,9 +34,9 @@
                             <td>{{ $class->date }}</td>
                             <td>
                                 @if(!empty($class->end_time))
-                                    {{ $class->time }} - {{ $class->end_time }}
+                                    {{ \Carbon\Carbon::parse($class->time)->format('g:i A') }} - {{ \Carbon\Carbon::parse($class->end_time)->format('g:i A') }}
                                 @else
-                                    {{ $class->time }}
+                                    {{ \Carbon\Carbon::parse($class->time)->format('g:i A') }}
                                 @endif
                             </td>
                             <td><span class="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">{{ $class->enrolled_students_count ?? 0 }}</span></td>

@@ -75,7 +75,6 @@
                     </div>
                     <div class="mb-3 flex flex-wrap gap-2">
                         <button id="mark-all-present" type="button" class="btn btn-success" style="display:none;">Mark all present</button>
-                        <button id="finalize-quick-attendance" type="button" class="btn btn-primary" style="display:none;">Mark the rest absent</button>
                     </div>
                     <div id="student-selection-list" class="space-y-2"></div>
                 </div>
@@ -147,6 +146,7 @@
     const recentScanCodes = new Map();
     let scannerReady = false;
     const duplicateScanWindow = 1500;
+    const automaticCameraValue = '__automatic__';
     const classStudents = @json($classStudents ?? []);
 
     function setStatus(message, type = 'info') {
@@ -394,11 +394,18 @@
 
         cameraSelect.innerHTML = '';
 
-        if (!cameras || cameras.length === 0) {
-            cameraSelect.innerHTML = '<option value="">No cameras found</option>';
-            startBtn.style.display = 'none';
+        const automaticOption = document.createElement('option');
+        automaticOption.value = automaticCameraValue;
+        automaticOption.textContent = 'Automatic camera (recommended)';
+        cameraSelect.appendChild(automaticOption);
 
-            setStatus('No camera found on this device.', 'danger');
+        if (!cameras || cameras.length === 0) {
+            selectedCameraId = automaticCameraValue;
+            cameraSelect.value = selectedCameraId;
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+
+            setStatus('No camera list is available yet. Start the camera to request access.', 'info');
 
             return;
         }
@@ -412,14 +419,7 @@
             cameraSelect.appendChild(option);
         });
 
-        /*
-         * Prefer FRONT camera
-         */
-        const frontCamera = cameras.find(camera =>
-            /front|user|facetime/i.test(camera.label || '')
-        );
-
-        const preferredCamera = frontCamera || cameras[0];
+        const preferredCamera = cameras[0];
 
         selectedCameraId = preferredCamera.id;
         cameraSelect.value = selectedCameraId;
@@ -428,20 +428,24 @@
         stopBtn.style.display = 'none';
 
         setStatus(
-            'Front camera selected. Click "Start Camera" to begin.',
+            'Camera detected. Click "Start Camera" to begin.',
             'info'
         );
 
     } catch (error) {
-        cameraSelect.innerHTML =
-            '<option value="">Unable to list cameras</option>';
+        cameraSelect.innerHTML = '';
+        const automaticOption = document.createElement('option');
+        automaticOption.value = automaticCameraValue;
+        automaticOption.textContent = 'Automatic camera (recommended)';
+        cameraSelect.appendChild(automaticOption);
+        selectedCameraId = automaticCameraValue;
 
         startBtn.style.display = 'inline-block';
         stopBtn.style.display = 'none';
 
         setStatus(
-            `Unable to access camera: ${error.message}`,
-            'danger'
+            'Camera list is unavailable until permission is granted. Start the camera to continue.',
+            'info'
         );
     }
 }
@@ -675,11 +679,6 @@
     let cameraStarting = false;
 
     async function startCamera(cameraId) {
-    if (!cameraId) {
-        setStatus('Please select a camera.', 'warning');
-        return;
-    }
-
     // Prevent multiple start requests at the same time
     if (cameraStarting || cameraRunning) {
         return;
@@ -696,6 +695,11 @@
 
         setStatus('Starting camera...', 'warning');
 
+        // Use browser camera selection when iOS or another device has not exposed IDs yet.
+        const cameraSource = cameraId && cameraId !== automaticCameraValue
+            ? cameraId
+            : { facingMode: 'environment' };
+
         /*
          * IMPORTANT:
          * Do NOT call reader.stop() here.
@@ -707,7 +711,7 @@
          */
 
         await reader.start(
-            cameraId,
+            cameraSource,
             config,
             onScanSuccess,
             () => {}

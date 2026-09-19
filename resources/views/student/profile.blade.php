@@ -3,7 +3,7 @@
 @section('showNavigation', 'false')
 
 @section('content')
-<div class="mx-auto max-w-6xl px-1 py-2 sm:px-0">
+<div class="mx-auto w-full max-w-6xl px-3 py-3 sm:px-4 sm:py-6">
     <a href="{{ route('student.dashboard') }}" class="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 transition hover:text-indigo-800">
         <span aria-hidden="true">&larr;</span> Back to Dashboard
     </a>
@@ -13,7 +13,7 @@
             <p class="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-indigo-200">Account overview</p>
             <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">Student Profile</h1>
         </div>
-        <div class="p-5 sm:p-8">
+        <div class="p-4 sm:p-8">
             <!-- Personal Information Section -->
             <div class="grid gap-8 md:grid-cols-2">
                 <div>
@@ -22,10 +22,6 @@
                     <div class="info-group">
                         <strong>Name:</strong>
                         <p class="mb-0 text-sm text-slate-500">{{ $student->name }}</p>
-                    </div>
-                    <div class="info-group">
-                        <strong>Email:</strong>
-                        <p class="mb-0 break-words text-sm text-slate-500">{{ $student->email ?? 'Not provided' }}</p>
                     </div>
                     <div class="info-group">
                         <strong>Gender:</strong>
@@ -59,7 +55,7 @@
                                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={{ $student->student_id }}" 
                                      alt="Student QR Code" 
                                      class="rounded-2xl border-2 border-slate-200 bg-white p-2 sm:p-3" 
-                                     style="max-width: 100%; width: 250px; height: 250px;">
+                                             style="max-width: 100%; width: min(250px, 100%); height: auto; aspect-ratio: 1;">
                             </div>
                             <p class="mb-2 text-sm text-slate-500"><strong>Student ID:</strong> {{ $student->student_id }}</p>
                             <p class="text-sm text-slate-500">Scan this QR code for attendance marking or verification</p>
@@ -79,7 +75,7 @@
                     </h2>
                     
                     @if($student->enrollments->count() > 0)
-                        <div class="table-responsive overflow-hidden rounded-2xl border border-slate-200">
+                        <div class="table-responsive overflow-x-auto rounded-2xl border border-slate-200">
                             <table class="w-full text-left text-sm">
                                 <thead class="bg-slate-50 text-xs uppercase tracking-[0.08em] text-slate-500">
                                     <tr>

@@ -57,14 +57,6 @@
                 </div>
             </div>
 
-            <div>
-                <label class="form-label">Email</label>
-                <input type="email" name="email" class="form-input @error('email') border-rose-300 @enderror" value="{{ old('email', $student->email) }}">
-                @error('email')
-                    <div class="mt-1 text-sm text-rose-600">{{ $message }}</div>
-                @enderror
-            </div>
-
             <div class="flex flex-wrap gap-3">
                 <button type="submit" class="btn btn-primary">Update Student</button>
                 <a href="{{ route('teacher.students.all') }}" class="btn btn-secondary">Cancel</a>

@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+    <div class="w-full max-w-md rounded-lg bg-white p-5 shadow-lg sm:p-8">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">Student Portal</h1>
             <p class="text-gray-600">Sign in with your Student ID</p>
@@ -30,7 +30,7 @@
                     id="student_id" 
                     name="student_id" 
                     value="{{ old('student_id') }}"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    class="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter your student ID"
                     required
                     autofocus
@@ -39,7 +39,7 @@
 
             <button 
                 type="submit" 
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200"
+                class="min-h-11 w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white transition duration-200 hover:bg-blue-700"
             >
                 Login
             </button>

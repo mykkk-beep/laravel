@@ -29,17 +29,17 @@
             <div class="card overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <!-- Message Header -->
                 <div class="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-indigo-50 px-4 py-3 sm:px-6 sm:py-4">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0">
                             <span class="inline-block rounded-full bg-indigo-100 px-2 sm:px-3 py-1 text-xs font-semibold text-indigo-700 mb-2">Teacher message</span>
                             <h2 class="text-base sm:text-lg font-bold text-slate-900 line-clamp-2">{{ $notification->title }}</h2>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
                             <small class="text-xs sm:text-sm text-slate-500 whitespace-nowrap">{{ $notification->created_at->format('M d, Y') }}</small>
                             <form method="POST" action="{{ route('student.notifications.destroy', $notification) }}" class="inline-block">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" onclick="return confirm('Delete this message?')" class="rounded-lg border border-rose-200 bg-white px-2 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition">Delete</button>
+                                <button type="submit" onclick="return confirm('Delete this message?')" class="min-h-10 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition">Delete</button>
                             </form>
                         </div>
                     </div>
@@ -56,7 +56,7 @@
                             </div>
                             <div class="min-w-0 flex-1">
                                 <div class="text-xs text-slate-500 mb-1">{{ $notification->created_at->format('M d, Y h:i A') }}</div>
-                                <div class="rounded-lg bg-white border border-slate-200 p-3 text-xs sm:text-sm text-slate-900 break-words whitespace-pre-wrap">{{ $notification->message }}</div>
+                                <div class="w-full rounded-lg bg-white border border-slate-200 p-3 text-xs sm:text-sm text-slate-900 break-words whitespace-pre-wrap">{{ $notification->message }}</div>
                             </div>
                         </div>
 
@@ -65,7 +65,7 @@
                             @if($reply->sender === 'parent')
                                 <!-- Your Reply (Right aligned) -->
                                 <div class="flex gap-3 justify-end">
-                                    <div class="max-w-xs sm:max-w-md">
+                                    <div class="min-w-0 max-w-[calc(100%-2.75rem)] sm:max-w-md">
                                         <div class="text-xs text-slate-500 mb-1 text-right">{{ $reply->created_at->format('M d, Y h:i A') }}</div>
                                         <div class="rounded-lg bg-emerald-600 p-3 text-xs sm:text-sm text-white break-words whitespace-pre-wrap">{{ $reply->message }}</div>
                                     </div>
@@ -95,7 +95,7 @@
                         <textarea 
                             id="reply-{{ $notification->id }}" 
                             name="reply" 
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 resize-none" 
+                            class="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 resize-none"
                             rows="3" 
                             placeholder="Write your reply here..." 
                             required

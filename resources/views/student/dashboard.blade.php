@@ -46,16 +46,16 @@
             <div class="p-4 sm:p-6">
                 <!-- Stats Cards - Mobile Optimized -->
                 <div class="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
-                    <div class="rounded-xl border border-slate-200 bg-white p-3 text-center hover:border-indigo-200 transition-colors">
-                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Total Classes</div>
+                    <div class="rounded-xl border border-slate-200 bg-white p-2 text-center hover:border-indigo-200 transition-colors sm:p-3">
+                        <div class="mb-1 text-[10px] font-semibold uppercase leading-tight tracking-wide text-slate-500 sm:text-xs">Total Classes</div>
                         <div class="text-lg sm:text-2xl font-bold text-slate-900">{{ $totalClasses }}</div>
                     </div>
-                    <div class="rounded-xl border border-slate-200 bg-white p-3 text-center hover:border-emerald-200 transition-colors">
-                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Present</div>
+                    <div class="rounded-xl border border-slate-200 bg-white p-2 text-center hover:border-emerald-200 transition-colors sm:p-3">
+                        <div class="mb-1 text-[10px] font-semibold uppercase leading-tight tracking-wide text-slate-500 sm:text-xs">Present</div>
                         <div class="text-lg sm:text-2xl font-bold text-emerald-600">{{ $presentCount }}</div>
                     </div>
-                    <div class="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-center hover:bg-indigo-100 transition-colors">
-                        <div class="text-xs font-semibold uppercase tracking-wide text-indigo-600 mb-1">Attendance %</div>
+                    <div class="rounded-xl border border-indigo-100 bg-indigo-50 p-2 text-center hover:bg-indigo-100 transition-colors sm:p-3">
+                        <div class="mb-1 text-[10px] font-semibold uppercase leading-tight tracking-wide text-indigo-600 sm:text-xs">Attendance %</div>
                         <div class="text-lg sm:text-2xl font-bold text-indigo-700">{{ $attendancePercentage }}%</div>
                     </div>
                 </div>
@@ -105,9 +105,9 @@
                         <div class="border-t border-slate-200 pt-3">
                             <div class="text-xs text-slate-600">
                                 <span class="font-semibold">Time:</span>
-                                {{ $student->classRoom->time ?? '—' }}
+                                {{ $student->classRoom->time ? \Carbon\Carbon::parse($student->classRoom->time)->format('g:i A') : '—' }}
                                 @if(!empty($student->classRoom->end_time))
-                                    <span class="text-slate-400">to</span> {{ $student->classRoom->end_time }}
+                                    <span class="text-slate-400">to</span> {{ \Carbon\Carbon::parse($student->classRoom->end_time)->format('g:i A') }}
                                 @endif
                             </div>
                         </div>

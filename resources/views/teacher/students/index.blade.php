@@ -3,6 +3,7 @@
 @section('content')
 <div class="mb-4 d-flex justify-content-between align-items-center">
     <h2 class="mb-1">Students in {{ $classRoom->name }}</h2>
+    <a class="btn btn-success" href="{{ route('teacher.students.create') }}">Add Student</a>
 </div>
 
 <div class="table-responsive">
