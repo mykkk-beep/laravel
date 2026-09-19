@@ -1,26 +1,12 @@
 {
     "version": 2,
-    "buildCommand": "npm run build",
-    "outputDirectory": "public",
     "builds": [
         {
             "src": "api/index.php",
             "use": "vercel-php@0.7.3"
-        },
-        {
-            "src": "public/**",
-            "use": "@vercel/static"
         }
     ],
     "routes": [
-        {
-            "src": "/build/(.*)",
-            "dest": "/public/build/$1"
-        },
-        {
-            "src": "/(images|css|js|favicon\\.ico|manifest\\.json|robots\\.txt|offline\\.html|serviceworker\\.js|sw\\.js)(.*)",
-            "dest": "/public/$1$2"
-        },
         {
             "src": "/(.*)",
             "dest": "/api/index.php"
