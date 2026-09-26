@@ -28,7 +28,6 @@
                 <select name="status" class="form-select">
                     <option value="active" {{ $teacher->status === 'active' ? 'selected' : '' }}>Active</option>
                     <option value="disabled" {{ $teacher->status === 'disabled' ? 'selected' : '' }}>Disabled</option>
-                    <option value="pending" {{ $teacher->status === 'pending' ? 'selected' : '' }}>Pending</option>
                 </select>
                 @if ($teacher->status === 'pending')
                     <div class="form-text text-warning">Account is pending, wait for the administrator verification.</div>

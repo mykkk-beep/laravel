@@ -50,7 +50,9 @@ class TeacherAttendanceReportTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Attendance Summary')
-            ->assertSee('Export Excel');
+            ->assertSee('Export Excel')
+            ->assertSee('report-print-wrapper')
+            ->assertSee('@media print');
 
         $exportResponse = $this->get(route('teacher.attendance.export', ['format' => 'excel', 'class_room_id' => $classRoom->id, 'date' => '2026-06-30']));
 
