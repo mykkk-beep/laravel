@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class Student extends Model
@@ -52,6 +53,21 @@ class Student extends Model
         return $this->hasMany(Enrollment::class, 'student_id');
     }
 
+    public function matchingStudentIds(): Collection
+    {
+        if (empty($this->student_id)) {
+            return collect([$this->id])->filter()->values();
+        }
+
+        return self::query()
+            ->where('student_id', $this->student_id)
+            ->where('name', $this->name)
+            ->pluck('id')
+            ->push($this->id)
+            ->unique()
+            ->values();
+    }
+
     public function currentEnrollmentForClass(?int $classRoomId): ?Enrollment
     {
         if (empty($classRoomId)) {
@@ -59,6 +75,20 @@ class Student extends Model
         }
 
         return $this->enrollments()->where('class_room_id', $classRoomId)->first();
+    }
+
+    public function totalClassCount(): int
+    {
+        $studentIds = $this->matchingStudentIds();
+        $classIds = self::query()
+            ->whereIn('id', $studentIds)
+            ->pluck('class_room_id')
+            ->merge(Enrollment::query()->whereIn('student_id', $studentIds)->pluck('class_room_id'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        return $classIds->count();
     }
 
 }

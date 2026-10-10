@@ -81,7 +81,6 @@
                                     <tr>
                                         <th scope="col" class="px-4 py-3 font-semibold">Class Name</th>
                                         <th scope="col" class="hidden px-4 py-3 font-semibold lg:table-cell">Status</th>
-                                        <th scope="col" class="hidden px-4 py-3 font-semibold lg:table-cell">Grade</th>
                                         <th scope="col" class="hidden px-4 py-3 font-semibold lg:table-cell">Date</th>
                                     </tr>
                                 </thead>
@@ -96,13 +95,6 @@
                                                 <span class="badge badge-sm @if($enrollment->status === 'enrolled') bg-success @elseif($enrollment->status === 'pending') bg-warning text-dark @else bg-secondary @endif">
                                                     {{ ucfirst($enrollment->status) }}
                                                 </span>
-                                            </td>
-                                            <td class="hidden px-4 py-3 lg:table-cell">
-                                                @if($enrollment->grade)
-                                                    <span class="badge bg-indigo-100 text-indigo-700">{{ $enrollment->grade }}</span>
-                                                @else
-                                                    <span class="text-slate-400">-</span>
-                                                @endif
                                             </td>
                                             <td class="hidden px-4 py-3 text-slate-500 lg:table-cell">
                                                 {{ $enrollment->created_at->format('M d, Y') }}

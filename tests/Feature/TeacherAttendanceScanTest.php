@@ -133,6 +133,7 @@ class TeacherAttendanceScanTest extends TestCase
         $response->assertOk();
         $response->assertSee('Click a student below to mark attendance instantly.');
         $response->assertSee('student-selection-list');
+        $response->assertSee('finalize-quick-attendance');
     }
 
     public function test_teacher_can_finalize_quick_attendance_for_the_selected_class(): void

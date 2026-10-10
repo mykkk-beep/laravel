@@ -70,22 +70,65 @@ class TeacherRecommendationTest extends TestCase
         $response = $this->post(route('teacher.recommendations.generate', $student), [
             'message' => 'Please support regular attendance at home.',
             'student_message' => 'You are doing well and should keep building on your progress.',
+            'subject' => 'Environmental Science',
             'send_to_parent' => false,
             'send_to_student' => true,
         ]);
 
         $response->assertRedirect();
+        $studentNotification = StudentNotification::where('student_id', $student->id)
+            ->where('recipient', 'student')
+            ->firstOrFail();
+        $this->assertStringContainsString('Subject: Environmental Science', $studentNotification->message);
+        $this->assertStringContainsString('You are doing well and should keep building on your progress.', $studentNotification->message);
         $this->assertDatabaseHas('student_notifications', [
             'student_id' => $student->id,
             'teacher_id' => $teacher->id,
             'recipient' => 'student',
-            'message' => 'You are doing well and should keep building on your progress.',
         ]);
         $this->assertDatabaseMissing('student_notifications', [
             'student_id' => $student->id,
             'teacher_id' => $teacher->id,
             'recipient' => 'guardian',
         ]);
+    }
+
+    public function test_custom_subject_is_included_in_parent_and_student_notifications(): void
+    {
+        $teacher = User::factory()->create([
+            'role' => User::ROLE_TEACHER,
+        ]);
+
+        $classRoom = ClassRoom::create([
+            'name' => 'Grade 8A',
+            'teacher_id' => $teacher->id,
+        ]);
+
+        $student = Student::create([
+            'name' => 'Ana Lopez',
+            'student_id' => '2026-001',
+            'class_room_id' => $classRoom->id,
+        ]);
+
+        $this->actingAs($teacher);
+
+        $response = $this->post(route('teacher.recommendations.generate', $student), [
+            'subject' => 'Earth Science',
+            'message' => 'Please review the lesson notes.',
+            'student_message' => 'Keep asking thoughtful questions.',
+            'send_to_parent' => true,
+            'send_to_student' => true,
+        ]);
+
+        $response->assertRedirect();
+
+        foreach (['guardian', 'student'] as $recipient) {
+            $notification = StudentNotification::where('student_id', $student->id)
+                ->where('recipient', $recipient)
+                ->firstOrFail();
+
+            $this->assertStringContainsString('Subject: Earth Science', $notification->message);
+        }
     }
 
     public function test_sent_recommendations_appear_on_the_recommendations_page(): void
@@ -170,6 +213,71 @@ class TeacherRecommendationTest extends TestCase
         $pageResponse->assertOk();
         $pageResponse->assertSee('Draft');
         $pageResponse->assertSee('Please support regular attendance at home.');
+    }
+
+    public function test_generated_recommendation_message_changes_by_category_and_priority(): void
+    {
+        $teacher = User::factory()->create([
+            'role' => User::ROLE_TEACHER,
+        ]);
+
+        $classRoom = ClassRoom::create([
+            'name' => 'Grade 8A',
+            'teacher_id' => $teacher->id,
+        ]);
+
+        $student = Student::create([
+            'name' => 'Ana Lopez',
+            'student_id' => '2026-001',
+            'class_room_id' => $classRoom->id,
+        ]);
+
+        $subject = Subject::create([
+            'name' => 'Mathematics',
+            'code' => 'MATH101',
+            'teacher_id' => $teacher->id,
+            'class_room_id' => $classRoom->id,
+        ]);
+
+        Enrollment::create([
+            'student_id' => $student->id,
+            'class_room_id' => $classRoom->id,
+            'subject_id' => $subject->id,
+            'status' => Enrollment::STATUS_ENROLLED,
+            'grade' => 82.00,
+        ]);
+
+        AttendanceRecord::create([
+            'student_id' => $student->id,
+            'class_room_id' => $classRoom->id,
+            'teacher_id' => $teacher->id,
+            'subject_id' => $subject->id,
+            'status' => 'absent',
+            'date' => now()->subDays(2)->toDateString(),
+            'notified' => false,
+        ]);
+
+        AttendanceRecord::create([
+            'student_id' => $student->id,
+            'class_room_id' => $classRoom->id,
+            'teacher_id' => $teacher->id,
+            'subject_id' => $subject->id,
+            'status' => 'absent',
+            'date' => now()->subDays(1)->toDateString(),
+            'notified' => false,
+        ]);
+
+        $this->actingAs($teacher);
+
+        $this->post(route('teacher.recommendations.generate', $student), [
+            'priority_level' => 'High',
+        ]);
+
+        $notification = StudentNotification::where('student_id', $student->id)->latest()->first();
+
+        $this->assertStringContainsString('Student Recommendation Letter', $notification->message);
+        $this->assertStringContainsString('Attendance Concern', $notification->message);
+        $this->assertStringContainsString('High Priority', $notification->message);
     }
 
     public function test_teacher_can_generate_a_recommendation_and_send_parent_letter(): void

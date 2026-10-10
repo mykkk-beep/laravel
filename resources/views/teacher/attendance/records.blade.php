@@ -13,7 +13,7 @@
         <a href="{{ route('teacher.attendance.report', request()->query()) }}" class="btn btn-primary">Generate Report</a>
         <a href="{{ route('teacher.attendance.export', array_merge(request()->query(), ['format' => 'excel'])) }}" class="btn btn-success">Export Excel</a>
         <a href="{{ route('teacher.attendance.export', array_merge(request()->query(), ['format' => 'pdf'])) }}" class="btn btn-danger">Export PDF</a>
-        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Print</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Print Report</button>
     </div>
 </div>
 

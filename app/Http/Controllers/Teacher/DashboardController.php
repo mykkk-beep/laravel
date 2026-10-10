@@ -161,16 +161,26 @@ class DashboardController extends Controller
         $data = $request->validate([
             'message' => 'nullable|string|max:2000',
             'student_message' => 'nullable|string|max:2000',
+            'subject' => 'nullable|string|max:255',
+            'category' => 'nullable|string|in:Attendance,Academic Performance,Behavior',
             'priority_level' => 'nullable|string|in:Low,Medium,High',
             'save_draft' => 'nullable|boolean',
             'send_to_parent' => 'nullable|boolean',
             'send_to_student' => 'nullable|boolean',
         ]);
 
-        $payload = $this->buildRecommendationPayload($student, $teacher, $data['priority_level'] ?? null);
+        $payload = $this->buildRecommendationPayload($student, $teacher, $data['priority_level'] ?? null, $data['category'] ?? null);
+        $subject = trim((string) ($data['subject'] ?? ''));
+        if ($subject !== '') {
+            $payload['subject'] = $subject;
+        }
         $customMessage = trim((string) ($data['message'] ?? ''));
         $studentMessage = trim((string) ($data['student_message'] ?? ''));
-        $message = $this->buildRecommendationMessage($payload, $teacher, $customMessage ?: null);
+        $message = $this->buildRecommendationMessage($payload, $teacher, $customMessage !== '' ? $customMessage : null);
+        $message = 'Subject: '.$payload['subject'].PHP_EOL.PHP_EOL.$message;
+        $studentNotificationMessage = $studentMessage !== ''
+            ? 'Subject: '.$payload['subject'].PHP_EOL.PHP_EOL.$studentMessage
+            : $message;
         $isDraft = (bool) ($data['save_draft'] ?? false);
         $sendToParent = (bool) ($data['send_to_parent'] ?? true);
         $sendToStudent = (bool) ($data['send_to_student'] ?? false);
@@ -180,7 +190,7 @@ class DashboardController extends Controller
                 'student_id' => $student->id,
                 'teacher_id' => $teacher->id,
                 'title' => $isDraft ? 'Draft Recommendation for '.$student->name : 'Recommendation for '.$student->name,
-                'message' => $isDraft ? ($customMessage !== '' ? $customMessage : 'Draft recommendation saved for later review.') : $message,
+                'message' => $message,
                 'recipient' => 'guardian',
             ]);
         }
@@ -190,7 +200,7 @@ class DashboardController extends Controller
                 'student_id' => $student->id,
                 'teacher_id' => $teacher->id,
                 'title' => 'Student Recommendation',
-                'message' => $studentMessage !== '' ? $studentMessage : ($customMessage !== '' ? $customMessage : $message),
+                'message' => $studentNotificationMessage,
                 'recipient' => 'student',
             ]);
         }
@@ -250,7 +260,7 @@ class DashboardController extends Controller
         return redirect()->route('teacher.notifications')->with('success', 'Reply sent to the parent.');
     }
 
-    private function buildRecommendationPayload(Student $student, $teacher, ?string $priorityOverride = null): array
+    private function buildRecommendationPayload(Student $student, $teacher, ?string $priorityOverride = null, ?string $categoryOverride = null): array
     {
         $recentRecords = AttendanceRecord::where('student_id', $student->id)
             ->whereHas('classRoom', function ($query) use ($teacher) {
@@ -277,7 +287,7 @@ class DashboardController extends Controller
         $averageGrade = (float) ($student->enrollments()->where('status', Enrollment::STATUS_ENROLLED)->avg('grade') ?? 0);
 
         $teacherNote = $this->buildTeacherObservation($absent, $averageGrade);
-        $category = $this->resolveCategory($absent, $averageGrade);
+        $category = $this->resolveCategory($absent, $averageGrade, $categoryOverride);
         $priority = $priorityOverride ?? $this->resolvePriority($absent, $averageGrade, $consecutiveAbsent);
 
         return [
@@ -296,33 +306,70 @@ class DashboardController extends Controller
 
     private function buildRecommendationMessage(array $payload, $teacher, ?string $customMessage = null): string
     {
-        $message = <<<MESSAGE
-Student Recommendation Letter
-
-Teacher Observation
-{$payload['teacher_note']}
-
-Concern Category
-{$payload['category']}
-
-Priority Level
-{$payload['priority']}
-
-Dear Parent/Guardian,
-
-This letter is to inform you that {$payload['student_name']} is currently experiencing a {$payload['category']} issue. Based on the teacher's observations, {$payload['teacher_note']}
-
-We encourage you to speak with {$payload['student_name']} and provide support to improve both attendance and academic performance. Please contact the school if additional guidance or assistance is needed.
-
-Sincerely,
-{$teacher->name}
-MESSAGE;
-
         if (! empty($customMessage)) {
-            $message .= PHP_EOL.PHP_EOL.'Additional Teacher Note'.PHP_EOL.$customMessage;
+            return $customMessage;
         }
 
-        return $message;
+        $category = $payload['category'] ?? 'Support Needed';
+        $priority = $payload['priority'] ?? 'Medium';
+        $priorityLabel = match ($priority) {
+            'High' => 'High Priority',
+            'Medium' => 'Medium Priority',
+            default => 'Low Priority',
+        };
+
+        $message = $this->buildCategoryPriorityMessage($category, $priority, $payload);
+
+        return implode(PHP_EOL, [
+            'Student Recommendation Letter',
+            '',
+            'Dear Parent/Guardian,',
+            '',
+            'This recommendation is for '.$payload['student_name'].' in '.$payload['subject'].'.',
+            'Category: '.$category,
+            'Priority: '.$priorityLabel,
+            '',
+            $message,
+            '',
+            'Sincerely,',
+            $teacher->name ?? 'Teacher',
+        ]);
+    }
+
+    private function buildCategoryPriorityMessage(string $category, string $priority, array $payload): string
+    {
+        $studentName = $payload['student_name'];
+        $subject = $payload['subject'];
+        $absent = (int) ($payload['absent'] ?? 0);
+        $averageGrade = $payload['average_grade'] ?? '0.00';
+
+        if (str_contains($category, 'Attendance')) {
+            $base = $studentName.' has missed '.$absent.' class sessions recently and this pattern is affecting classroom participation.';
+
+            return match ($priority) {
+                'High' => 'We are very concerned about '.$base.' We request immediate support at home and a clear plan to improve attendance in '.$subject.' before this becomes a larger concern.',
+                'Medium' => 'We are monitoring '.$base.' We encourage consistent attendance and regular communication so that '.$studentName.' can stay engaged in learning and avoid falling further behind.',
+                default => 'We appreciate your support in helping '.$studentName.' maintain regular attendance. '.$base.' Continued follow-up at home will help keep progress strong in '.$subject.'.',
+            };
+        }
+
+        if (str_contains($category, 'Academic')) {
+            $base = $studentName.' is currently showing academic concerns that need closer attention.';
+
+            return match ($priority) {
+                'High' => 'We are concerned that '.$base.' Additional academic support and stronger study routines are needed immediately to help '.$studentName.' improve performance in '.$subject.'.',
+                'Medium' => 'We are tracking '.$base.' Continued encouragement, extra practice, and teacher support will help '.$studentName.' improve confidence and achievement in '.$subject.'.',
+                default => 'We recommend gentle academic monitoring for '.$studentName.'. '.$base.' Small daily study habits and routine check-ins can support steady progress in '.$subject.'.',
+            };
+        }
+
+        $base = $studentName.' would benefit from additional guidance and close support at home and school.';
+
+        return match ($priority) {
+            'High' => 'We need urgent support for '.$base.' A clear plan for accountability, encouragement, and follow-up will help '.$studentName.' improve classroom conduct and learning habits.',
+            'Medium' => 'We recommend continued support for '.$base.' Ongoing communication and consistent reinforcement will help '.$studentName.' build stronger habits in school and at home.',
+            default => 'We encourage continued encouragement and positive reinforcement for '.$studentName.'. '.$base.' This will help maintain steady progress and healthy classroom routines.',
+        };
     }
 
     private function buildStudentPerformanceMessage(array $payload): string
@@ -361,8 +408,17 @@ MESSAGE;
         return 'The student is showing a need for continued encouragement and monitoring in class.';
     }
 
-    private function resolveCategory(int $absent, float $averageGrade): string
+    private function resolveCategory(int $absent, float $averageGrade, ?string $categoryOverride = null): string
     {
+        if ($categoryOverride !== null) {
+            return match ($categoryOverride) {
+                'Attendance' => 'Attendance Concern',
+                'Academic Performance' => 'Academic Concern',
+                'Behavior' => 'Support Needed',
+                default => 'Support Needed',
+            };
+        }
+
         if ($absent >= 3 && $averageGrade < 70) {
             return 'Attendance and Academic Concern';
         }
@@ -444,9 +500,10 @@ MESSAGE;
                     'student_name' => $student?->name ?? 'Unknown Student',
                     'class_name' => optional($student?->classRoom)->name ?? 'Unassigned',
                     'category' => $category,
-                    'message' => trim((string) $notification->message) !== '' ? trim((string) $notification->message) : 'Recommendation was sent to the parent.',
+                    'message' => trim((string) $notification->message),
                     'teacher_name' => $teacher->name ?? 'Teacher',
                     'date_sent' => $notification->created_at?->translatedFormat('M d, Y') ?? now()->translatedFormat('M d, Y'),
+                    'date_iso' => $notification->created_at?->toDateString() ?? now()->toDateString(),
                     'status' => $status,
                     'attendance_percentage' => $attendancePercentage,
                     'absences' => $absentCount,

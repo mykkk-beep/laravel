@@ -75,6 +75,7 @@
                     </div>
                     <div class="mb-3 flex flex-wrap gap-2">
                         <button id="mark-all-present" type="button" class="btn btn-success" style="display:none;">Mark all present</button>
+                        <button id="finalize-quick-attendance" type="button" class="btn btn-outline-primary" style="display:none;">Finalize quick attendance</button>
                     </div>
                     <div id="student-selection-list" class="space-y-2"></div>
                 </div>

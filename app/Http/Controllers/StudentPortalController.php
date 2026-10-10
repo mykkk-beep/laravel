@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AttendanceRecord;
 use App\Models\NotificationReply;
 use App\Models\Student;
 use App\Models\StudentNotification;
@@ -53,29 +54,40 @@ class StudentPortalController extends Controller
 
         // Get attendance records
         try {
-            $attendanceRecords = $student->attendanceRecords()
+            $studentIds = $student->matchingStudentIds();
+            $attendanceQuery = AttendanceRecord::whereIn('student_id', $studentIds);
+
+            $attendanceRecords = (clone $attendanceQuery)
                 ->with('classRoom')
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
 
             // Calculate attendance statistics
-            $totalClasses = $student->attendanceRecords()
-                ->distinct('class_room_id')
-                ->count();
+            $totalClasses = $student->totalClassCount();
 
-            $presentCount = $student->attendanceRecords()
+            $presentCount = (clone $attendanceQuery)
                 ->where('status', 'present')
                 ->count();
 
             $attendancePercentage = $totalClasses > 0 
                 ? round(($presentCount / $totalClasses) * 100, 2) 
                 : 0;
+
+            $otherClassAttendance = (clone $attendanceQuery)
+                ->with('classRoom')
+                ->when($student->class_room_id, function ($query, $classRoomId) {
+                    $query->where('class_room_id', '!=', $classRoomId);
+                })
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get();
         } catch (\Exception $e) {
             // If there's an error querying attendance, use default values
             $attendanceRecords = collect();
             $totalClasses = 0;
             $presentCount = 0;
             $attendancePercentage = 0;
+            $otherClassAttendance = collect();
         }
 
         $teacherMessages = StudentNotification::where('student_id', $student->id)
@@ -90,6 +102,7 @@ class StudentPortalController extends Controller
             'totalClasses' => $totalClasses,
             'presentCount' => $presentCount,
             'attendancePercentage' => $attendancePercentage,
+            'otherClassAttendance' => $otherClassAttendance,
             'notificationCount' => $notificationCount,
         ]);
     }
@@ -108,7 +121,7 @@ class StudentPortalController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $recentAttendance = $student->attendanceRecords()
+        $recentAttendance = AttendanceRecord::whereIn('student_id', $student->matchingStudentIds())
             ->with('classRoom')
             ->orderBy('created_at', 'desc')
             ->take(5)

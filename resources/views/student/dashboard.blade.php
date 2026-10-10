@@ -117,6 +117,29 @@
                         <div class="text-sm text-slate-500">No schedule available.</div>
                     </div>
                 @endif
+
+                <div class="mt-6 border-t border-slate-200 pt-5">
+                    <h3 class="mb-3 text-xs font-bold uppercase tracking-[0.1em] text-slate-600">Recent attendance in other classes</h3>
+                    @if($otherClassAttendance->isNotEmpty())
+                        <div class="space-y-2">
+                            @foreach($otherClassAttendance as $record)
+                                <div class="rounded-lg bg-slate-50 p-3">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-xs font-semibold text-slate-800">{{ $record->classRoom?->name ?? 'Unknown class' }}</span>
+                                        <span class="rounded-full px-2 py-1 text-[10px] font-semibold whitespace-nowrap {{ $record->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($record->status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
+                                            {{ ucfirst($record->status) }}
+                                        </span>
+                                    </div>
+                                    <div class="mt-1 text-[11px] text-slate-500">{{ $record->created_at?->format('M d, Y') ?? '—' }}</div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-sm text-slate-500">
+                            No recent attendance in other classes.
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </div>

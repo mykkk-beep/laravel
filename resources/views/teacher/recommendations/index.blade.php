@@ -15,11 +15,26 @@
                 ? round(($presentCount / $attendanceRecords->count()) * 100)
                 : 100;
             $grade = optional($student->enrollments()->where('status', \App\Models\Enrollment::STATUS_ENROLLED)->latest()->first())->grade;
-            $category = $absentCount >= 3 ? 'Attendance' : ($grade !== null && $grade < 75 ? 'Academic Performance' : 'Behavior');
+            $category = $absentCount >= 3 ? 'Attendance Concern' : ($grade !== null && $grade < 75 ? 'Academic Concern' : 'Support Needed');
+            $priority = $absentCount >= 4 ? 'High' : ($absentCount >= 2 ? 'Medium' : 'Low');
+            $message = match ($category) {
+                'Attendance Concern' => match ($priority) {
+                    'High' => "Your child has had {$absentCount} absences recently, and we need immediate support to improve attendance and class participation.",
+                    'Medium' => "Your child has missed several classes, and we would like to work with you to support stronger attendance and regular class participation.",
+                    default => "Your child has had a few absences, and we appreciate your support in helping maintain consistent attendance.",
+                },
+                'Academic Concern' => match ($priority) {
+                    'High' => "Your child's current academic performance needs urgent attention, and we recommend immediate support with schoolwork and study routines.",
+                    'Medium' => "Your child is showing some academic concerns, and we encourage continued support to strengthen learning habits and confidence.",
+                    default => "We recommend continued encouragement at home to support steady academic progress and confidence.",
+                },
+                default => match ($priority) {
+                    'High' => "We need stronger partnership and follow-up to help your child improve behavior and classroom routines.",
+                    'Medium' => "We recommend continued guidance and check-ins to help your child build positive classroom habits.",
+                    default => "We encourage ongoing support and communication to help your child maintain steady progress and positive school habits.",
+                },
+            };
             $status = $absentCount >= 4 ? 'Viewed' : ($absentCount >= 2 ? 'Sent' : 'Draft');
-            $message = $absentCount >= 3
-                ? "Your child has had {$absentCount} absences this term and needs stronger attendance support at school."
-                : "We encourage continued support at home to help maintain steady academic progress and positive classroom behavior.";
 
             return [
                 'student_name' => $student->name,
@@ -28,6 +43,7 @@
                 'message' => $message,
                 'teacher_name' => $teacherName,
                 'date_sent' => now()->subDays($absentCount > 0 ? $absentCount : 1)->translatedFormat('M d, Y'),
+                'date_iso' => now()->subDays($absentCount > 0 ? $absentCount : 1)->toDateString(),
                 'status' => $status,
                 'attendance_percentage' => $attendancePercentage,
                 'absences' => $absentCount,
@@ -69,26 +85,27 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M8.5 2.75a5.75 5.75 0 100 11.5 5.75 5.75 0 000-11.5zM1.75 8.5a6.75 6.75 0 1112.5 0 6.75 6.75 0 01-12.5 0z" clip-rule="evenodd" />
                     </svg>
-                    <input type="text" placeholder="Search by student name" class="w-44 border-0 bg-transparent text-sm outline-none placeholder:text-slate-400">
+                    <input id="recommendation-search" type="text" placeholder="Search by student name" class="w-44 border-0 bg-transparent text-sm outline-none placeholder:text-slate-400">
                 </label>
-                <select class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 outline-none">
-                    <option>Filter by class</option>
-                    <option>Grade 8A</option>
-                    <option>Grade 9B</option>
+                <select id="recommendation-class-filter" class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 outline-none">
+                    <option value="">Filter by class</option>
+                    @foreach(collect($recommendationItems)->pluck('class_name')->filter()->unique()->sort()->values() as $className)
+                        <option value="{{ $className }}">{{ $className }}</option>
+                    @endforeach
                 </select>
-                <select class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 outline-none">
-                    <option>Filter by type</option>
-                    <option>Attendance</option>
-                    <option>Academic Performance</option>
-                    <option>Behavior</option>
+                <select id="recommendation-type-filter" class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 outline-none">
+                    <option value="">Filter by type</option>
+                    <option value="Attendance">Attendance</option>
+                    <option value="Academic Performance">Academic Performance</option>
+                    <option value="Behavior">Behavior</option>
                 </select>
-                <select class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 outline-none">
-                    <option>Filter by status</option>
-                    <option>Draft</option>
-                    <option>Sent</option>
-                    <option>Viewed</option>
+                <select id="recommendation-status-filter" class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 outline-none">
+                    <option value="">Filter by status</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Sent">Sent</option>
+                    <option value="Viewed">Viewed</option>
                 </select>
-                <input type="date" class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 outline-none">
+                <input id="recommendation-date-filter" type="date" class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 outline-none">
             </div>
         </div>
 
@@ -103,7 +120,7 @@
                 <p class="mt-2 max-w-md text-sm text-slate-500">Create a new recommendation to guide parents on attendance, behavior, or academic progress.</p>
             </div>
         @else
-            <div class="space-y-4">
+            <div id="recommendation-list" class="space-y-4">
                 @foreach($recommendationItems as $item)
                     @php
                         $statusStyles = match($item['status']) {
@@ -112,7 +129,14 @@
                             default => 'bg-amber-50 text-amber-700 ring-amber-200',
                         };
                     @endphp
-                    <article class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                    <article
+                        class="recommendation-card rounded-3xl border border-slate-200 bg-slate-50/70 p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                        data-student-name="{{ strtolower($item['student_name'] ?? '') }}"
+                        data-class-name="{{ strtolower($item['class_name'] ?? '') }}"
+                        data-type="{{ strtolower($item['category'] ?? '') }}"
+                        data-status="{{ strtolower($item['status'] ?? '') }}"
+                        data-date="{{ $item['date_iso'] ?? $item['date_sent'] ?? '' }}"
+                    >
                         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                             <div class="space-y-2">
                                 <div class="flex flex-wrap items-center gap-2">
@@ -130,7 +154,9 @@
                                     </span>
                                 </div>
                                 <p class="text-sm font-medium text-indigo-600">{{ $item['category'] }}</p>
-                                <p class="max-w-2xl text-sm leading-6 text-slate-600">{{ $item['message'] }}</p>
+                                @if(! empty($item['message']))
+                                    <p class="max-w-2xl text-sm leading-6 text-slate-600">{{ $item['message'] }}</p>
+                                @endif
                             </div>
                             <div class="rounded-2xl bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
                                 <p class="font-semibold text-slate-900">{{ $item['teacher_name'] }}</p>
@@ -142,7 +168,6 @@
                             <span class="rounded-full bg-white px-3 py-1">Attendance: {{ $item['attendance_percentage'] }}%</span>
                             <span class="rounded-full bg-white px-3 py-1">Absences: {{ $item['absences'] }}</span>
                             <span class="rounded-full bg-white px-3 py-1">Late arrivals: {{ $item['late_arrivals'] }}</span>
-                            <span class="rounded-full bg-white px-3 py-1">Grade: {{ $item['grade'] ?? '—' }}</span>
                         </div>
 
                         <div class="mt-5 flex flex-wrap gap-2">
@@ -160,6 +185,10 @@
                         </div>
                     </article>
                 @endforeach
+            </div>
+            <div id="no-recommendation-filters" class="hidden rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 px-8 py-12 text-center">
+                <h3 class="text-lg font-semibold text-slate-900">No recommendations match your filters.</h3>
+                <p class="mt-2 text-sm text-slate-500">Try another student, class, or date range to view more results.</p>
             </div>
         @endif
     </div>
@@ -180,8 +209,9 @@
             </div>
 
             <div class="mt-6 grid gap-4 md:grid-cols-2">
-                <label class="block text-sm font-medium text-slate-700">
-                    <span class="mb-2 block">Student</span>
+                <div class="block text-sm font-medium text-slate-700">
+                    <label for="student-search" class="mb-2 block">Student</label>
+                    <input type="search" id="student-search" placeholder="Search by name or student ID" class="mb-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400">
                     <select name="student_id" id="student-select" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none" required>
                         <option value="">Select student</option>
                         @if(isset($students) && $students->isNotEmpty())
@@ -192,13 +222,13 @@
                             <option disabled>No students available</option>
                         @endif
                     </select>
-                </label>
+                </div>
                 <label class="block text-sm font-medium text-slate-700">
                     <span class="mb-2 block">Category</span>
-                    <select class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none">
-                        <option>Attendance</option>
-                        <option>Academic Performance</option>
-                        <option>Behavior</option>
+                    <select name="category" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none">
+                        <option value="Attendance">Attendance</option>
+                        <option value="Academic Performance">Academic Performance</option>
+                        <option value="Behavior">Behavior</option>
                     </select>
                 </label>
                 <label class="block text-sm font-medium text-slate-700">
@@ -211,7 +241,7 @@
                 </label>
                 <label class="block text-sm font-medium text-slate-700">
                     <span class="mb-2 block">Subject</span>
-                    <input type="text" value="Mathematics" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none">
+                    <input type="text" name="subject" value="Mathematics" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none">
                 </label>
             </div>
 
@@ -245,20 +275,95 @@
             document.addEventListener('DOMContentLoaded', function () {
                 const form = document.getElementById('recommendation-form');
                 const studentSelect = document.getElementById('student-select');
+                const studentSearch = document.getElementById('student-search');
 
-                if (!form || !studentSelect) {
-                    return;
+                if (studentSelect && studentSearch) {
+                    const studentOptions = Array.from(studentSelect.options).filter((option) => option.value);
+
+                    const filterStudents = () => {
+                        const searchTerm = studentSearch.value.trim().toLowerCase();
+
+                        studentOptions.forEach((option) => {
+                            option.hidden = option.value !== studentSelect.value
+                                && !option.textContent.toLowerCase().includes(searchTerm);
+                        });
+                    };
+
+                    studentSearch.addEventListener('input', filterStudents);
+                    studentSelect.addEventListener('change', () => {
+                        studentSearch.value = '';
+                        filterStudents();
+                    });
                 }
 
-                form.addEventListener('submit', function (event) {
-                    const studentId = studentSelect.value;
+                if (form && studentSelect) {
+                    form.addEventListener('submit', function (event) {
+                        const studentId = studentSelect.value;
 
-                    if (!studentId) {
-                        event.preventDefault();
+                        if (!studentId) {
+                            event.preventDefault();
+                            return;
+                        }
+
+                        form.action = form.action.replace('__STUDENT__', studentId);
+                    });
+                }
+
+                const filters = {
+                    search: document.getElementById('recommendation-search'),
+                    class: document.getElementById('recommendation-class-filter'),
+                    type: document.getElementById('recommendation-type-filter'),
+                    status: document.getElementById('recommendation-status-filter'),
+                    date: document.getElementById('recommendation-date-filter'),
+                };
+
+                const cards = Array.from(document.querySelectorAll('.recommendation-card'));
+                const noResults = document.getElementById('no-recommendation-filters');
+
+                const applyFilters = () => {
+                    if (!cards.length) {
                         return;
                     }
 
-                    form.action = form.action.replace('__STUDENT__', studentId);
+                    const searchTerm = (filters.search?.value || '').trim().toLowerCase();
+                    const classValue = (filters.class?.value || '').trim().toLowerCase();
+                    const typeValue = (filters.type?.value || '').trim().toLowerCase();
+                    const statusValue = (filters.status?.value || '').trim().toLowerCase();
+                    const dateValue = (filters.date?.value || '').trim();
+
+                    let visibleCount = 0;
+
+                    cards.forEach((card) => {
+                        const studentName = (card.dataset.studentName || '').toLowerCase();
+                        const className = (card.dataset.className || '').toLowerCase();
+                        const type = (card.dataset.type || '').toLowerCase();
+                        const status = (card.dataset.status || '').toLowerCase();
+                        const date = (card.dataset.date || '').trim();
+
+                        const matchesSearch = !searchTerm || studentName.includes(searchTerm);
+                        const matchesClass = !classValue || className === classValue;
+                        const matchesType = !typeValue || type === typeValue;
+                        const matchesStatus = !statusValue || status === statusValue;
+                        const matchesDate = !dateValue || date === dateValue || (date && date.startsWith(dateValue));
+
+                        const shouldShow = matchesSearch && matchesClass && matchesType && matchesStatus && matchesDate;
+                        card.style.display = shouldShow ? '' : 'none';
+
+                        if (shouldShow) {
+                            visibleCount++;
+                        }
+                    });
+
+                    if (noResults) {
+                        noResults.classList.toggle('hidden', visibleCount !== 0);
+                    }
+                };
+
+                Object.values(filters).forEach((field) => {
+                    if (field) {
+                        field.addEventListener('input', applyFilters);
+                        field.addEventListener('change', applyFilters);
+                    }
                 });
             });
         </script>

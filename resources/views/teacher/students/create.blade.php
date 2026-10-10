@@ -29,7 +29,7 @@
             @csrf
             @if(!isset($classRoom) && isset($classes))
                 <div>
-                    <label class="form-label">Class <span class="text-sm text-slate-500">(optional)</span></label>
+                    <label class="form-label">Class <span class="text-sm text-slate-500"></span></label>
                     <select name="class_room_id" class="form-input">
                         <option value="">No class assigned</option>
                         @forelse($classes as $teacherClass)
