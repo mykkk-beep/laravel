@@ -25,7 +25,7 @@
                     </div>
                     <div class="info-group">
                         <strong>Gender:</strong>
-                        <p class="mb-0 text-sm text-slate-500">{{ $student->sex ?? 'Not provided' }}</p>
+                        <p class="mb-0 text-sm text-slate-500 gender-text">{{ $student->sex ?? 'Not provided' }}</p>
                     </div>
                     </div>
                 </div>
@@ -35,10 +35,6 @@
                     <div class="info-group">
                         <strong>Student ID:</strong>
                         <p class="mb-0 text-sm text-slate-500"><code>{{ $student->student_id }}</code></p>
-                    </div>
-                    <div class="info-group">
-                        <strong>Primary Class:</strong>
-                        <p class="mb-0 text-sm text-slate-500">{{ $student->classRoom?->name ?? 'Not assigned' }}</p>
                     </div>
                     </div>
                 </div>
@@ -69,12 +65,12 @@
             <div>
                     <h2 class="mb-4 text-base font-semibold text-slate-900">
                         <i class="fas fa-book"></i> Enrolled Classes 
-                        @if($student->enrollments->count() > 0)
-                            <span class="badge bg-indigo-100 text-indigo-700">{{ $student->enrollments->count() }}</span>
+                        @if($enrolledClasses->count() > 0)
+                            <span class="badge bg-indigo-100 text-indigo-700">{{ $enrolledClasses->count() }}</span>
                         @endif
                     </h2>
                     
-                    @if($student->enrollments->count() > 0)
+                    @if($enrolledClasses->count() > 0)
                         <div class="table-responsive overflow-x-auto rounded-2xl border border-slate-200">
                             <table class="w-full text-left text-sm">
                                 <thead class="bg-slate-50 text-xs uppercase tracking-[0.08em] text-slate-500">
@@ -85,19 +81,19 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($student->enrollments as $enrollment)
+                                    @foreach($enrolledClasses as $enrollment)
                                         <tr>
                                             <td class="px-4 py-3 align-top text-slate-900">
-                                                <strong class="block">{{ $enrollment->classRoom?->name ?? 'Unknown Class' }}</strong>
-                                                <span class="text-xs text-slate-500 lg:hidden">{{ $enrollment->subject?->name ?? 'Not assigned' }}</span>
+                                                <strong class="block">{{ $enrollment['classRoom']->name ?? 'Unknown Class' }}</strong>
+                                                <span class="text-xs text-slate-500 lg:hidden">{{ $enrollment['subject']?->name ?? 'Not assigned' }}</span>
                                             </td>
                                             <td class="px-4 py-3">
-                                                <span class="badge badge-sm @if($enrollment->status === 'enrolled') bg-success @elseif($enrollment->status === 'pending') bg-warning text-dark @else bg-secondary @endif">
-                                                    {{ ucfirst($enrollment->status) }}
+                                                <span class="badge badge-sm @if($enrollment['status'] === 'enrolled') bg-success @elseif($enrollment['status'] === 'pending') bg-warning text-dark @else bg-secondary @endif">
+                                                    {{ ucfirst($enrollment['status']) }}
                                                 </span>
                                             </td>
                                             <td class="hidden px-4 py-3 text-slate-500 lg:table-cell">
-                                                {{ $enrollment->created_at->format('M d, Y') }}
+                                                {{ $enrollment['created_at']?->format('M d, Y') ?? '—' }}
                                             </td>
                                         </tr>
                                     @endforeach
@@ -122,6 +118,9 @@
 </div>
 
 <style>
+    .gender-text::first-letter {
+        text-transform: uppercase;
+    }
     .info-group {
         display: flex;
         flex-direction: column;

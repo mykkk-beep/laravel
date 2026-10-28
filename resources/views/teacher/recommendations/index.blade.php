@@ -101,7 +101,6 @@
                 </select>
                 <select id="recommendation-status-filter" class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 outline-none">
                     <option value="">Filter by status</option>
-                    <option value="Draft">Draft</option>
                     <option value="Sent">Sent</option>
                     <option value="Viewed">Viewed</option>
                 </select>
@@ -267,7 +266,6 @@
             </div>
 
             <div class="mt-6 flex flex-wrap justify-end gap-3">
-                <button type="button" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Save Draft</button>
                 <button type="submit" class="rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:brightness-95">Send Recommendation</button>
             </div>
         </div>

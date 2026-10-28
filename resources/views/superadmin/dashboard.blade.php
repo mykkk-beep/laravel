@@ -10,7 +10,7 @@
             <h2 class="text-2xl font-semibold text-slate-900">Super Admin Dashboard</h2>
             <p class="mt-1 text-sm text-slate-500">A concise overview of teacher health, activity, and admin actions.</p>
         </div>
-        <a class="btn btn-success" href="{{ route('superadmin.teachers.create') }}">Create Teacher</a>
+        <a class="btn btn-success" href="{{ route('superadmin.teachers.create') }}">Create Teacher Account</a>
     </div>
 
     <div class="grid gap-4 md:grid-cols-3">
@@ -98,14 +98,14 @@
 
         <div class="space-y-6">
             <div class="card">
-                <div class="card-body">
+                <div class="card-body" x-data="{ expanded: false }">
                     <div class="mb-4 flex items-center justify-between gap-3">
                         <h3 class="card-title mb-0">Recent Activities</h3>
                         <span class="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Live overview</span>
                     </div>
                     <ul class="space-y-3">
                         @forelse($activities ?? collect() as $activity)
-                            <li class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <li @if($loop->index >= 4) x-show="expanded" style="display: none;" @endif class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                                 <div class="font-semibold text-slate-900">{{ $activity->description }}</div>
                                 <div class="mt-1 text-sm text-slate-500">{{ $activity->created_at->diffForHumans() }}</div>
                             </li>
@@ -113,6 +113,9 @@
                             <li class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">No activity recorded yet.</li>
                         @endforelse
                     </ul>
+                    @if(($activities ?? collect())->count() > 4)
+                        <button type="button" class="mt-4 text-sm font-semibold text-indigo-600 hover:text-indigo-700" @click="expanded = !expanded" :aria-expanded="expanded.toString()" x-text="expanded ? 'Show less' : 'Show all activities'">Show all activities</button>
+                    @endif
                 </div>
             </div>
         </div>

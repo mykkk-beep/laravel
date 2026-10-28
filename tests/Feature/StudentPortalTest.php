@@ -73,8 +73,24 @@ class StudentPortalTest extends TestCase
 
         $response->assertOk();
         $response->assertViewHas('totalClasses', 2);
+        $response->assertViewHas('classSchedules', function ($classSchedules) use ($mathClass, $scienceClass) {
+            return $classSchedules->pluck('id')->all() === [$mathClass->id, $scienceClass->id];
+        });
         $response->assertSee('Recent attendance in other classes');
         $response->assertSee('Science');
+
+        $profileResponse = $this->withSession([
+            'student_id' => $student->id,
+            'student_name' => $student->name,
+            'authenticated_student' => true,
+        ])->get(route('student.profile'));
+
+        $profileResponse->assertOk();
+        $profileResponse->assertViewHas('enrolledClasses', function ($enrolledClasses) use ($mathClass, $scienceClass) {
+            return $enrolledClasses->pluck('classRoom.id')->all() === [$mathClass->id, $scienceClass->id];
+        });
+        $profileResponse->assertSee('Mathematics');
+        $profileResponse->assertSee('Science');
     }
 
     public function test_student_portal_includes_attendance_and_classes_from_matching_student_records(): void

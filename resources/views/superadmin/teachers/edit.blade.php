@@ -3,7 +3,7 @@
 @section('content')
 <div class="card">
     <div class="card-body">
-        <h2>Edit Teacher</h2>
+        <h2>Edit Teacher Account</h2>
         <form method="POST" action="{{ route('superadmin.teachers.update', $teacher) }}">
             @csrf
             @method('PUT')
@@ -33,7 +33,7 @@
                     <div class="form-text text-warning">Account is pending, wait for the administrator verification.</div>
                 @endif
             </div>
-            <button class="btn btn-primary">Update Teacher</button>
+            <button class="btn btn-primary">Update Account</button>
         </form>
     </div>
 </div>

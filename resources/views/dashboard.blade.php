@@ -35,7 +35,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Teachers</h2>
-    <a class="btn btn-success" href="{{ route('superadmin.teachers.create') }}">Create Teacher</a>
+    <a class="btn btn-success" href="{{ route('superadmin.teachers.create') }}">Create Teacher Account</a>
 </div>
 
 <form method="GET" action="{{ route('superadmin.dashboard') }}" class="row g-2 mb-4">

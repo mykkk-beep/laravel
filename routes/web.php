@@ -135,9 +135,11 @@ Route::middleware(['auth', 'role:teacher'])->group(function () {
     Route::post('/teacher/subjects', [TeacherSubjectController::class, 'store'])->name('teacher.subjects.store');
 });
 
-Route::middleware('auth')->prefix('superadmin')->name('superadmin.')->group(function () {
+Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard', [TeacherController::class, 'index'])->name('dashboard');
 
+    Route::post('teachers/{teacher}/approve', [TeacherController::class, 'approve'])->name('teachers.approve');
+    Route::post('teachers/{teacher}/decline', [TeacherController::class, 'decline'])->name('teachers.decline');
     Route::resource('teachers', TeacherController::class)->except(['show']);
 
     Route::get('profile', [TeacherController::class, 'profile'])->name('profile');

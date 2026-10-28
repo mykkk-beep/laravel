@@ -95,7 +95,16 @@
                                 </div>
 
                                 <div class="flex items-center gap-2 sm:gap-3">
-                                    <a href="{{ route('teacher.notifications') }}" class="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 shadow-sm hover:border-slate-300 hover:bg-slate-50 transition text-base">🔔</a>
+                                    @if($isSuperAdmin)
+                                        <a href="{{ route('superadmin.teachers.index') }}" class="relative rounded-lg border border-slate-200 bg-white p-2 text-slate-600 shadow-sm hover:border-slate-300 hover:bg-slate-50 transition text-base" aria-label="Pending teacher registrations" title="Pending teacher registrations">
+                                            🔔
+                                            @if(($pendingTeacherCount ?? 0) > 0)
+                                                <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">{{ $pendingTeacherCount }}</span>
+                                            @endif
+                                        </a>
+                                    @elseif($isTeacher)
+                                        <a href="{{ route('teacher.notifications') }}" class="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 shadow-sm hover:border-slate-300 hover:bg-slate-50 transition text-base" aria-label="Notifications">🔔</a>
+                                    @endif
 
                                     <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 sm:gap-3 rounded-lg border border-slate-200 bg-slate-50 px-2 sm:px-3 py-2 transition hover:border-slate-300 hover:bg-slate-100" aria-label="Edit profile" title="Edit profile">
                                         <div class="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-slate-900 text-xs sm:text-sm font-semibold text-white shrink-0">

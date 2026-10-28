@@ -69,9 +69,7 @@
                 </div>
                 <div>
                     <label class="form-label">Status</label>
-                    <select name="status" class="form-input">
-                        <option value="pending" {{ old('status', 'pending') == 'pending' ? 'selected' : '' }}>Enrolled</option>
-                    </select>
+                    <p class="form-input">Enrolled</p>
                 </div>
             </div>
             <div class="flex flex-wrap gap-3">

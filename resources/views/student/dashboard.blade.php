@@ -91,32 +91,32 @@
                 <h2 class="mt-2 text-lg font-semibold text-slate-900 sm:text-xl">Current class schedule</h2>
             </div>
             <div class="p-4 sm:p-6">
-                @if($student->classRoom)
-                    <div class="rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 p-4 border border-slate-200">
-                        <div class="flex items-start justify-between gap-2 mb-3">
+                @forelse($classSchedules as $classRoom)
+                    <div class="mb-3 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4 last:mb-0">
+                        <div class="mb-3 flex items-start justify-between gap-2">
                             <div class="min-w-0">
-                                <strong class="block text-sm font-bold text-slate-900 truncate">{{ $student->classRoom->name }}</strong>
-                                <div class="mt-1 text-xs text-slate-600">{{ $student->classRoom->classroom ?? '—' }}</div>
+                                <strong class="block truncate text-sm font-bold text-slate-900">{{ $classRoom->name }}</strong>
+                                <div class="mt-1 text-xs text-slate-600">{{ $classRoom->classroom ?? '—' }}</div>
                             </div>
-                            @if($student->classRoom->date)
-                                <span class="shrink-0 rounded-lg bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-700 whitespace-nowrap">{{ $student->classRoom->date }}</span>
+                            @if($classRoom->date)
+                                <span class="shrink-0 whitespace-nowrap rounded-lg bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-700">{{ $classRoom->date }}</span>
                             @endif
                         </div>
                         <div class="border-t border-slate-200 pt-3">
                             <div class="text-xs text-slate-600">
                                 <span class="font-semibold">Time:</span>
-                                {{ $student->classRoom->time ? \Carbon\Carbon::parse($student->classRoom->time)->format('g:i A') : '—' }}
-                                @if(!empty($student->classRoom->end_time))
-                                    <span class="text-slate-400">to</span> {{ \Carbon\Carbon::parse($student->classRoom->end_time)->format('g:i A') }}
+                                {{ $classRoom->time ? \Carbon\Carbon::parse($classRoom->time)->format('g:i A') : '—' }}
+                                @if(!empty($classRoom->end_time))
+                                    <span class="text-slate-400">to</span> {{ \Carbon\Carbon::parse($classRoom->end_time)->format('g:i A') }}
                                 @endif
                             </div>
                         </div>
                     </div>
-                @else
+                @empty
                     <div class="rounded-xl border-2 border-dashed border-slate-300 p-6 text-center">
                         <div class="text-sm text-slate-500">No schedule available.</div>
                     </div>
-                @endif
+                @endforelse
 
                 <div class="mt-6 border-t border-slate-200 pt-5">
                     <h3 class="mb-3 text-xs font-bold uppercase tracking-[0.1em] text-slate-600">Recent attendance in other classes</h3>
@@ -146,4 +146,3 @@
 </div>
 
 @endsection
-

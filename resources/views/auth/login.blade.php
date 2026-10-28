@@ -1,4 +1,10 @@
 <x-guest-layout>
+    <a href="{{ url('/') }}" class="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 rounded-md">
+        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.56l3.22 3.22a.75.75 0 11-1.06 1.06l-4.5-4.5a.75.75 0 010-1.06l4.5-4.5a.75.75 0 111.06 1.06l-3.22 3.22h10.69A.75.75 0 0117 10z" clip-rule="evenodd" />
+        </svg>
+        {{ __('Back') }}
+    </a>
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 

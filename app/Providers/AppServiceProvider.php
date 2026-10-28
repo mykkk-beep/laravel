@@ -25,19 +25,33 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         View::composer('layouts.app', function ($view) {
-            if (! Auth::check() || Auth::user()->role !== User::ROLE_TEACHER) {
+            if (! Auth::check()) {
                 return;
             }
 
-            $teacher = Auth::user();
-            $absentNotificationCount = AttendanceRecord::whereHas('classRoom', function ($query) use ($teacher) {
-                $query->where('teacher_id', $teacher->id);
+            $user = Auth::user();
+            if ($user->role === User::ROLE_SUPERADMIN) {
+                $pendingTeacherCount = User::where('role', User::ROLE_TEACHER)
+                    ->where('status', User::STATUS_PENDING)
+                    ->count();
+
+                $view->with('pendingTeacherCount', $pendingTeacherCount);
+
+                return;
+            }
+
+            if ($user->role !== User::ROLE_TEACHER) {
+                return;
+            }
+
+            $absentNotificationCount = AttendanceRecord::whereHas('classRoom', function ($query) use ($user) {
+                $query->where('teacher_id', $user->id);
             })->where('status', 'absent')
                 ->whereDate('date', '>=', now()->subDays(7)->toDateString())
                 ->distinct('student_id')
                 ->count('student_id');
 
-            $pendingParentMessageCount = StudentNotification::where('teacher_id', $teacher->id)
+            $pendingParentMessageCount = StudentNotification::where('teacher_id', $user->id)
                 ->whereHas('latestReply', function ($query) {
                     $query->where('sender', 'parent');
                 })

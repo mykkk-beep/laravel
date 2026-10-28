@@ -13,6 +13,10 @@ class TeacherController extends Controller
     public function index(Request $request)
     {
         $search = trim((string) $request->query('search', ''));
+        $requestedSort = $request->query('sort');
+        $sort = is_string($requestedSort) && in_array($requestedSort, ['latest', 'oldest'], true)
+            ? $requestedSort
+            : 'name';
 
         $teachersQuery = User::where('role', User::ROLE_TEACHER);
 
@@ -23,9 +27,23 @@ class TeacherController extends Controller
             });
         }
 
-        $teachers = $teachersQuery->orderBy('name')->get();
+        if ($sort === 'latest') {
+            $teachersQuery->orderByDesc('created_at')->orderByDesc('id');
+        } elseif ($sort === 'oldest') {
+            $teachersQuery->orderBy('created_at')->orderBy('id');
+        } else {
+            $teachersQuery->orderBy('name');
+        }
+
+        $teachers = $teachersQuery->get();
         $activeTeachersCount = User::where('role', User::ROLE_TEACHER)->where('active', true)->count();
         $inactiveTeachersCount = User::where('role', User::ROLE_TEACHER)->where('active', false)->count();
+        $disabledTeachersCount = User::where('role', User::ROLE_TEACHER)
+            ->where('status', User::STATUS_DISABLED)
+            ->count();
+        $pendingTeachersCount = User::where('role', User::ROLE_TEACHER)
+            ->where('status', User::STATUS_PENDING)
+            ->count();
         $activities = SuperAdminActivity::latest()->take(8)->get();
 
         if ($request->route()?->getName() === 'superadmin.dashboard') {
@@ -38,7 +56,15 @@ class TeacherController extends Controller
             ));
         }
 
-        return view('superadmin.teachers.index', compact('teachers', 'search', 'activeTeachersCount', 'activities'));
+        return view('superadmin.teachers.index', compact(
+            'teachers',
+            'search',
+            'sort',
+            'activeTeachersCount',
+            'disabledTeachersCount',
+            'pendingTeachersCount',
+            'activities'
+        ));
     }
 
     public function create()
@@ -102,6 +128,16 @@ class TeacherController extends Controller
         return redirect()->route('superadmin.teachers.index')->with('success', 'Teacher updated successfully.');
     }
 
+    public function approve(User $teacher)
+    {
+        return $this->updatePendingStatus($teacher, User::STATUS_ACTIVE, 'Teacher account approved successfully.');
+    }
+
+    public function decline(User $teacher)
+    {
+        return $this->updatePendingStatus($teacher, User::STATUS_DISABLED, 'Teacher account declined.');
+    }
+
     public function destroy(User $teacher)
     {
         abort_unless($teacher->role === User::ROLE_TEACHER, 404);
@@ -152,6 +188,28 @@ class TeacherController extends Controller
         $this->logActivity('password_changed', 'Changed superadmin password');
 
         return redirect()->route('superadmin.profile')->with('success', 'Password updated successfully.');
+    }
+
+    private function updatePendingStatus(User $teacher, string $status, string $message)
+    {
+        abort_unless($teacher->role === User::ROLE_TEACHER, 404);
+
+        if ($teacher->status !== User::STATUS_PENDING) {
+            return redirect()->route('superadmin.teachers.index')
+                ->with('error', 'This teacher account is no longer pending approval.');
+        }
+
+        $teacher->status = $status;
+        $teacher->active = $status === User::STATUS_ACTIVE;
+        $teacher->save();
+
+        $this->logActivity(
+            $status === User::STATUS_ACTIVE ? 'teacher_approved' : 'teacher_declined',
+            $message,
+            ['teacher_id' => $teacher->id, 'teacher_name' => $teacher->name]
+        );
+
+        return redirect()->route('superadmin.teachers.index')->with('success', $message);
     }
 
     private function logActivity(string $type, string $description, ?array $details = null): void

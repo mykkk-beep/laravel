@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttendanceRecord;
+use App\Models\Enrollment;
 use App\Models\NotificationReply;
 use App\Models\Student;
 use App\Models\StudentNotification;
@@ -50,7 +51,15 @@ class StudentPortalController extends Controller
     public function dashboard()
     {
         $studentId = Session::get('student_id');
-        $student = Student::findOrFail($studentId);
+        $student = Student::with(['classRoom', 'enrollments.classRoom'])->findOrFail($studentId);
+        $classSchedules = $student->enrollments
+            ->where('status', Enrollment::STATUS_ENROLLED)
+            ->map(fn (Enrollment $enrollment) => $enrollment->classRoom)
+            ->push($student->classRoom)
+            ->filter()
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
 
         // Get attendance records
         try {
@@ -98,6 +107,7 @@ class StudentPortalController extends Controller
 
         return view('student.dashboard', [
             'student' => $student,
+            'classSchedules' => $classSchedules,
             'attendanceRecords' => $attendanceRecords,
             'totalClasses' => $totalClasses,
             'presentCount' => $presentCount,
@@ -173,8 +183,31 @@ class StudentPortalController extends Controller
     {
         $studentId = Session::get('student_id');
         $student = Student::with(['classRoom', 'enrollments.classRoom', 'enrollments.subject'])->findOrFail($studentId);
+        $enrolledClasses = $student->enrollments
+            ->map(fn (Enrollment $enrollment) => [
+                'classRoom' => $enrollment->classRoom,
+                'subject' => $enrollment->subject,
+                'status' => $enrollment->status,
+                'created_at' => $enrollment->created_at,
+            ])
+            ->filter(fn (array $enrollment) => $enrollment['classRoom'] !== null)
+            ->values();
 
-        return view('student.profile', ['student' => $student]);
+        if ($student->classRoom && ! $enrolledClasses->contains(
+            fn (array $enrollment) => (int) $enrollment['classRoom']->id === (int) $student->class_room_id
+        )) {
+            $enrolledClasses->prepend([
+                'classRoom' => $student->classRoom,
+                'subject' => null,
+                'status' => $student->status ?? Enrollment::STATUS_ENROLLED,
+                'created_at' => $student->created_at,
+            ]);
+        }
+
+        return view('student.profile', [
+            'student' => $student,
+            'enrolledClasses' => $enrolledClasses,
+        ]);
     }
 
     /**
