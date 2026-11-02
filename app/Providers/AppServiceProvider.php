@@ -57,8 +57,24 @@ class AppServiceProvider extends ServiceProvider
                 })
                 ->count();
 
+            $pendingRecommendationReplyCount = StudentNotification::where('teacher_id', $user->id)
+                ->where(function ($query) {
+                    $query->where(function ($query) {
+                        $query->where('recipient', 'guardian')
+                            ->where('title', 'like', 'Recommendation for %');
+                    })->orWhere(function ($query) {
+                        $query->where('recipient', 'student')
+                            ->where('title', 'Student Recommendation');
+                    });
+                })
+                ->whereHas('latestReply', function ($query) {
+                    $query->where('sender', 'parent');
+                })
+                ->count();
+
             $view->with('absentNotificationCount', $absentNotificationCount)
-                ->with('pendingParentMessageCount', $pendingParentMessageCount);
+                ->with('pendingParentMessageCount', $pendingParentMessageCount)
+                ->with('pendingRecommendationReplyCount', $pendingRecommendationReplyCount);
         });
     }
 }

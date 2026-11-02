@@ -38,7 +38,7 @@
                     <input type="time" name="time" class="form-input" value="{{ old('time', $sourceClass?->time) }}" required>
                 </div>
                 <div>
-                    <label class="form-label">End Time (optional)</label>
+                    <label class="form-label">End Time</label>
                     <input type="time" name="end_time" class="form-input" value="{{ old('end_time', $sourceClass?->end_time) }}">
                 </div>
             </div>

@@ -240,7 +240,7 @@
                 </label>
                 <label class="block text-sm font-medium text-slate-700">
                     <span class="mb-2 block">Subject</span>
-                    <input type="text" name="subject" value="Mathematics" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none">
+                    <input type="text" name="subject" value="" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none">
                 </label>
             </div>
 

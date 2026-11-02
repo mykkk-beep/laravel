@@ -47,8 +47,19 @@ class TeacherController extends Controller
         $activities = SuperAdminActivity::latest()->take(8)->get();
 
         if ($request->route()?->getName() === 'superadmin.dashboard') {
+            $activeTeachers = User::where('role', User::ROLE_TEACHER)
+                ->where('active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'email']);
+            $inactiveTeachers = User::where('role', User::ROLE_TEACHER)
+                ->where('active', false)
+                ->orderBy('name')
+                ->get(['id', 'name', 'email']);
+
             return view('superadmin.dashboard', compact(
                 'teachers',
+                'activeTeachers',
+                'inactiveTeachers',
                 'search',
                 'activeTeachersCount',
                 'inactiveTeachersCount',

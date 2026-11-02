@@ -4,7 +4,7 @@
 @section('pageSubtitle', 'Manage teachers, monitor activity, and keep the platform running smoothly.')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-6" x-data="{ teacherAccountType: null }">
     <div class="flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div>
             <h2 class="text-2xl font-semibold text-slate-900">Super Admin Dashboard</h2>
@@ -14,22 +14,92 @@
     </div>
 
     <div class="grid gap-4 md:grid-cols-3">
-        <div class="card">
+        <button type="button" class="card w-full text-left transition hover:border-indigo-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" @click="teacherAccountType = 'active'" aria-haspopup="dialog">
             <div class="card-body">
-                <div class="text-sm font-medium text-slate-500">Active Teachers</div>
+                <div class="text-sm font-medium text-slate-500">Active Accounts</div>
                 <div class="mt-3 text-3xl font-semibold text-slate-900">{{ $activeTeachersCount ?? 0 }}</div>
+                <div class="mt-2 text-sm text-indigo-600">Click to view active accounts</div>
             </div>
-        </div>
-        <div class="card">
+        </button>
+        <button type="button" class="card w-full text-left transition hover:border-indigo-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" @click="teacherAccountType = 'inactive'" aria-haspopup="dialog">
             <div class="card-body">
-                <div class="text-sm font-medium text-slate-500">Inactive Teachers</div>
+                <div class="text-sm font-medium text-slate-500">Inactive Accounts</div>
                 <div class="mt-3 text-3xl font-semibold text-slate-900">{{ $inactiveTeachersCount ?? 0 }}</div>
+                <div class="mt-2 text-sm text-indigo-600">Click to view inactive accounts</div>
             </div>
-        </div>
+        </button>
         <div class="card">
             <div class="card-body">
                 <div class="text-sm font-medium text-slate-500">Recent System Activity</div>
                 <div class="mt-3 text-3xl font-semibold text-slate-900">{{ ($activities ?? collect())->count() }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div
+        x-cloak
+        x-show="teacherAccountType !== null"
+        x-transition.opacity
+        @keydown.escape.window="teacherAccountType = null"
+        @click.self="teacherAccountType = null"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="active-teachers-title"
+    >
+        <div class="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl">
+            <div class="mb-5 flex items-start justify-between gap-4">
+                <div>
+                    <h3 id="teacher-accounts-title" class="text-xl font-semibold text-slate-900">
+                        <span x-show="teacherAccountType === 'active'">Active Teacher Accounts</span>
+                        <span x-show="teacherAccountType === 'inactive'">Inactive Teacher Accounts</span>
+                    </h3>
+                    <p class="mt-1 text-sm text-slate-500">Passwords are not displayed because they are securely stored as hashes.</p>
+                </div>
+                <button type="button" class="btn btn-outline-secondary" @click="teacherAccountType = null" aria-label="Close teacher accounts">Close</button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="table" x-show="teacherAccountType === 'active'">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Username</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($activeTeachers ?? collect() as $teacher)
+                            <tr>
+                                <td>{{ $teacher->name }}</td>
+                                <td>{{ $teacher->email }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="2" class="text-center text-slate-500">No active teacher accounts.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+                <table class="table" x-show="teacherAccountType === 'inactive'">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Username</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($inactiveTeachers ?? collect() as $teacher)
+                            <tr>
+                                <td>{{ $teacher->name }}</td>
+                                <td>{{ $teacher->email }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="2" class="text-center text-slate-500">No inactive teacher accounts.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -39,7 +109,7 @@
             <div class="card-body">
                 <div class="mb-4 flex items-center justify-between gap-3">
                     <div>
-                        <h3 class="card-title mb-0">Teacher Management</h3>
+                        <h3 class="card-title mb-0">Account Management</h3>
                         <p class="text-sm text-slate-500">Search and review teacher accounts quickly.</p>
                     </div>
                 </div>

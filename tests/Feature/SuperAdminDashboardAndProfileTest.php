@@ -47,6 +47,24 @@ class SuperAdminDashboardAndProfileTest extends TestCase
         $response->assertSee('Super Admin Dashboard');
         $response->assertSee('Active Teachers');
         $response->assertSee('2');
+        $response->assertSee('Click to view active accounts');
+        $response->assertSee('Click to view inactive accounts');
+        $response->assertSee('Active Teacher Accounts');
+        $response->assertSee('Inactive Teacher Accounts');
+        $response->assertSee('active@example.com');
+        $response->assertSee('newteacher@example.com');
+        $response->assertSee('inactive@example.com');
+        $response->assertViewHas('activeTeachers', function ($activeTeachers): bool {
+            return $activeTeachers->pluck('email')->all() === [
+                'active@example.com',
+                'newteacher@example.com',
+            ];
+        });
+        $response->assertViewHas('inactiveTeachers', function ($inactiveTeachers): bool {
+            return $inactiveTeachers->pluck('email')->all() === ['inactive@example.com'];
+        });
+        $response->assertSee('Passwords are not displayed');
+        $response->assertDontSee('password123');
         $response->assertSee('Recent Activities');
         $response->assertSee('Created teacher account');
     }
