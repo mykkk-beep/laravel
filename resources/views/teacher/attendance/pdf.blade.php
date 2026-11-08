@@ -19,6 +19,7 @@
         <span>Total Entries: {{ $summary['total'] }}</span>
         <span>Present: {{ $summary['present'] }}</span>
         <span>Absent: {{ $summary['absent'] }}</span>
+        <span>Excused: {{ $summary['excused'] }}</span>
         <span>Attendance Rate: {{ $summary['attendance_rate'] }}%</span>
     </div>
     <table>

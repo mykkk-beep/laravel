@@ -67,6 +67,7 @@ Route::prefix('student')->name('student.')->group(function () {
     Route::middleware('student.authenticated')->group(function () {
         Route::get('/dashboard', [StudentPortalController::class, 'dashboard'])->name('dashboard');
         Route::get('/notifications', [StudentPortalController::class, 'notifications'])->name('notifications');
+        Route::post('/attendance-excuses', [StudentPortalController::class, 'submitAttendanceExcuse'])->name('attendance-excuses.store');
         Route::post('/notifications/{notification}/reply', [StudentPortalController::class, 'reply'])->name('notifications.reply');
         Route::delete('/notifications/{notification}', [StudentPortalController::class, 'destroy'])->name('notifications.destroy');
         Route::get('/profile', [StudentPortalController::class, 'profile'])->name('profile');
@@ -82,6 +83,7 @@ Route::prefix('parent')->name('parent.')->group(function () {
     Route::middleware('parent.auth')->group(function () {
         Route::get('/dashboard', [ParentDashboardController::class, 'index'])->name('dashboard');
         Route::get('/notifications', [ParentDashboardController::class, 'notifications'])->name('notifications');
+        Route::post('/attendance-excuses', [ParentDashboardController::class, 'submitAttendanceExcuse'])->name('attendance-excuses.store');
         Route::post('/notifications/{notification}/reply', [ParentDashboardController::class, 'reply'])->name('notifications.reply');
         Route::delete('/notifications/{notification}', [ParentDashboardController::class, 'destroy'])->name('notifications.destroy');
     });
@@ -104,7 +106,7 @@ Route::middleware(['auth', 'role:teacher'])->group(function () {
     Route::get('/teacher/classes', [TeacherClassController::class, 'index'])->name('teacher.classes.index');
     Route::get('/teacher/classes/create', [TeacherClassController::class, 'create'])->name('teacher.classes.create');
     Route::post('/teacher/classes', [TeacherClassController::class, 'store'])->name('teacher.classes.store');
-    Route::get('/teacher/classes/{classRoom}/duplicate', [TeacherClassController::class, 'create'])->name('teacher.classes.duplicate');
+    Route::post('/teacher/classes/{classRoom}/duplicate', [TeacherClassController::class, 'duplicate'])->name('teacher.classes.duplicate');
     Route::get('/teacher/classes/{classRoom}/edit', [TeacherClassController::class, 'edit'])->name('teacher.classes.edit');
     Route::put('/teacher/classes/{classRoom}', [TeacherClassController::class, 'update'])->name('teacher.classes.update');
     Route::delete('/teacher/classes/{classRoom}', [TeacherClassController::class, 'destroy'])->name('teacher.classes.destroy');
@@ -129,6 +131,7 @@ Route::middleware(['auth', 'role:teacher'])->group(function () {
     Route::post('/teacher/attendance/record', [TeacherAttendanceController::class, 'record'])->name('teacher.attendance.record');
     Route::post('/teacher/attendance/finalize-quick', [TeacherAttendanceController::class, 'finalizeQuick'])->name('teacher.attendance.finalize-quick');
     Route::post('/teacher/attendance/mark-all-present', [TeacherAttendanceController::class, 'markAllPresent'])->name('teacher.attendance.mark-all-present');
+    Route::post('/teacher/attendance/excuses/{attendanceExcuse}/review', [TeacherAttendanceController::class, 'reviewExcuse'])->name('teacher.attendance.excuses.review');
 
     Route::get('/teacher/subjects', [TeacherSubjectController::class, 'index'])->name('teacher.subjects.index');
     Route::get('/teacher/subjects/create', [TeacherSubjectController::class, 'create'])->name('teacher.subjects.create');

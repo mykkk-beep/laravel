@@ -18,7 +18,7 @@
         </div>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-4">
+    <div class="grid gap-4 md:grid-cols-5">
         <div class="card">
             <div class="card-body">
                 <div class="text-sm font-medium text-slate-500">Total Entries</div>
@@ -35,6 +35,12 @@
             <div class="card-body">
                 <div class="text-sm font-medium text-slate-500">Absent</div>
                 <div class="mt-2 text-2xl font-semibold text-rose-600">{{ $summary['absent'] }}</div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <div class="text-sm font-medium text-slate-500">Excused</div>
+                <div class="mt-2 text-2xl font-semibold text-amber-600">{{ $summary['excused'] }}</div>
             </div>
         </div>
         <div class="card">

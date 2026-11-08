@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
 @section('pageTitle', 'Notifications')
-@section('pageSubtitle', 'Review messages from parents and respond directly.')
+@section('pageSubtitle', 'Review messages from parents and absence excuse requests.')
 
 @section('content')
 <div class="flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
     <div>
-        <h2 class="text-2xl font-semibold text-slate-900">Parent Notifications</h2>
-        <p class="mt-1 text-sm text-slate-500">View messages from parents and reply directly here.</p>
+        <h2 class="text-2xl font-semibold text-slate-900">Notifications</h2>
+        <p class="mt-1 text-sm text-slate-500">View parent messages and excuse requests sent to you.</p>
     </div>
     <a class="btn btn-outline-secondary" href="{{ route('teacher.dashboard') }}">Back to Dashboard</a>
 </div>
@@ -30,9 +30,13 @@
                             <div class="font-semibold text-slate-900">{{ $thread->title }}</div>
                             <div class="mt-1 text-sm text-slate-500">{{ $thread->student->name ?? 'Student' }} • {{ $thread->created_at->format('M d, Y h:i A') }}</div>
                         </div>
-                        <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] {{ $thread->replies->last()?->sender === 'parent' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700' }}">{{ $thread->replies->last()?->sender === 'parent' ? 'Parent awaiting reply' : 'Conversation open' }}</span>
+                        <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] {{ $thread->recipient === 'teacher' ? 'bg-amber-100 text-amber-700' : ($thread->replies->last()?->sender === 'parent' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700') }}">{{ $thread->recipient === 'teacher' ? 'Excuse request' : ($thread->replies->last()?->sender === 'parent' ? 'Parent awaiting reply' : 'Conversation open') }}</span>
                     </summary>
                     <div class="mt-4 space-y-3">
+                        @if($thread->recipient === 'teacher')
+                            <div class="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 whitespace-pre-wrap">{{ $thread->message }}</div>
+                            <a class="btn btn-primary" href="{{ route('teacher.attendance.scan') }}">Review attendance excuses</a>
+                        @else
                         <div class="rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
                             <div class="font-semibold text-slate-900">Message</div>
                             <div class="mt-1">{{ $thread->message }}</div>
@@ -78,6 +82,7 @@
                                 <button type="submit" class="btn btn-primary">Reply</button>
                             </div>
                         </form>
+                        @endif
                     </div>
                 </details>
             @empty

@@ -42,8 +42,9 @@ class DashboardController extends Controller
         $presentCount = $todayAttendance->where('status', 'present')->count();
         $lateCount = $todayAttendance->where('status', 'late')->count();
         $absentCount = $todayAttendance->where('status', 'absent')->count();
-        $attendanceRate = $todayAttendance->count() > 0
-            ? round(($presentCount / $todayAttendance->count()) * 100, 1)
+        $excusedCount = $todayAttendance->where('status', 'excused')->count();
+        $attendanceRate = $todayAttendance->count() > $excusedCount
+            ? round(($presentCount / ($todayAttendance->count() - $excusedCount)) * 100, 1)
             : 0;
 
         $recentActivities = AttendanceRecord::with('student')
@@ -65,6 +66,7 @@ class DashboardController extends Controller
         $recommendationsCount = $recommendations->count();
 
         $messageThreads = StudentNotification::where('teacher_id', $teacher->id)
+            ->where('recipient', '!=', 'teacher')
             ->with('student')
             ->orderByDesc('created_at')
             ->get();
@@ -80,6 +82,8 @@ class DashboardController extends Controller
         $labels = [];
         $presentData = [];
         $absentData = [];
+        $lateData = [];
+        $excusedData = [];
 
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i)->toDateString();
@@ -87,12 +91,16 @@ class DashboardController extends Controller
             $dayRecords = $records->get($date) ?? collect();
             $presentData[] = $dayRecords->where('status', 'present')->count();
             $absentData[] = $dayRecords->where('status', 'absent')->count();
+            $lateData[] = $dayRecords->where('status', 'late')->count();
+            $excusedData[] = $dayRecords->where('status', 'excused')->count();
         }
 
         $dailyAttendance = [
             'labels' => $labels,
             'present' => $presentData,
             'absent' => $absentData,
+            'late' => $lateData,
+            'excused' => $excusedData,
         ];
 
         return view('teacher.dashboard', compact(
@@ -103,6 +111,7 @@ class DashboardController extends Controller
             'presentCount',
             'lateCount',
             'absentCount',
+            'excusedCount',
             'attendanceRate',
             'recentActivities',
             'upcomingClasses',
@@ -250,6 +259,7 @@ class DashboardController extends Controller
         $teacher = Auth::user();
 
         abort_unless($notification->teacher_id === $teacher->id, 403);
+        abort_unless($notification->recipient !== 'teacher', 422);
 
         $data = $request->validate([
             'reply' => 'required|string|max:1000',

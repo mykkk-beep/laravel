@@ -43,7 +43,10 @@
                             <td>
                                 <div class="flex flex-wrap gap-2" role="group">
                                     <a class="btn btn-sm btn-primary" href="{{ route('teacher.classes.students.index', $class) }}">Students</a>
-                                    <a class="btn btn-sm btn-success" href="{{ route('teacher.classes.duplicate', ['classRoom' => $class, 'copy_from' => $class->id]) }}">Duplicate &amp; Change Schedule</a>
+                                    <form method="POST" action="{{ route('teacher.classes.duplicate', $class) }}">
+                                        @csrf
+                                        <button class="btn btn-sm btn-success">Duplicate</button>
+                                    </form>
                                     <a class="btn btn-sm btn-secondary" href="{{ route('teacher.classes.edit', $class) }}">Edit</a>
                                     <form method="POST" action="{{ route('teacher.classes.destroy', $class) }}" onsubmit="return confirm('Delete this class?');">
                                         @csrf

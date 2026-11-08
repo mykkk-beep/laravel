@@ -3,36 +3,54 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Models\AttendanceExcuse;
 use App\Models\AttendanceRecord;
 use App\Models\ClassRoom;
 use App\Models\Student;
+use App\Models\StudentNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
-/**
- * Build a simple attendance summary for the selected class and date.
- */
-function buildAttendanceSummary(int $classRoomId, string $date): array
-{
-    $records = AttendanceRecord::where('class_room_id', $classRoomId)
-        ->whereDate('date', $date)
-        ->get();
-
-    $total = $records->count();
-    $present = $records->where('status', 'present')->count();
-    $absent = $records->where('status', 'absent')->count();
-
-    return [
-        'total' => $total,
-        'present' => $present,
-        'absent' => $absent,
-        'attendance_rate' => $total > 0 ? round(($present / $total) * 100, 1) : 0,
-    ];
-}
+use Illuminate\Support\Facades\DB;
 
 class AttendanceController extends Controller
 {
+    private function getClassStudents(ClassRoom $classRoom)
+    {
+        return Student::query()
+            ->where(function ($query) use ($classRoom) {
+                $query->where('class_room_id', $classRoom->id)
+                    ->orWhereHas('enrollments', function ($enrollments) use ($classRoom) {
+                        $enrollments->where('class_room_id', $classRoom->id);
+                    });
+            })
+            ->orderBy('name')
+            ->orderBy('student_id')
+            ->get();
+    }
+
+    private function buildAttendanceSummary(ClassRoom $classRoom, string $date): array
+    {
+        $students = $this->getClassStudents($classRoom);
+        $records = AttendanceRecord::where('class_room_id', $classRoom->id)
+            ->whereDate('date', $date)
+            ->whereIn('student_id', $students->pluck('id'))
+            ->get();
+
+        $total = $students->count();
+        $present = $records->where('status', 'present')->count();
+        $excused = $records->where('status', 'excused')->count();
+        $absent = $records->where('status', 'absent')->count();
+
+        return [
+            'total' => $total,
+            'present' => $present,
+            'absent' => $absent,
+            'excused' => $excused,
+            'attendance_rate' => $total > $excused ? round(($present / ($total - $excused)) * 100, 1) : 0,
+        ];
+    }
+
     private function getFilteredRecords(Request $request)
     {
         $teacher = Auth::user();
@@ -63,13 +81,15 @@ class AttendanceController extends Controller
         $present = $records->where('status', 'present')->count();
         $late = $records->where('status', 'late')->count();
         $absent = $records->where('status', 'absent')->count();
-        $attendanceRate = $total > 0 ? round((($present + $late) / $total) * 100, 1) : 0;
+        $excused = $records->where('status', 'excused')->count();
+        $attendanceRate = $total > $excused ? round((($present + $late) / ($total - $excused)) * 100, 1) : 0;
 
         return [
             'total' => $total,
             'present' => $present,
             'late' => $late,
             'absent' => $absent,
+            'excused' => $excused,
             'attendance_rate' => $attendanceRate,
         ];
     }
@@ -119,6 +139,12 @@ class AttendanceController extends Controller
                 $periodStatuses = ['am' => 'absent', 'pm' => 'absent'];
 
                 foreach ($studentRecords as $record) {
+                    if ($record->status === 'excused') {
+                        $periodStatuses = ['am' => 'excused', 'pm' => 'excused'];
+
+                        continue;
+                    }
+
                     $scanTime = $record->time_in
                         ? Carbon::parse($record->time_in)
                         : $record->created_at;
@@ -129,9 +155,10 @@ class AttendanceController extends Controller
                     }
                 }
 
-                $status = collect($periodStatuses)->contains(fn ($value) => $value !== 'absent')
+                $attended = collect($periodStatuses)->contains(fn ($value) => in_array($value, ['present', 'late'], true));
+                $status = $attended
                     ? (collect($periodStatuses)->contains('late') ? 'late' : 'present')
-                    : 'absent';
+                    : (collect($periodStatuses)->contains('excused') ? 'excused' : 'absent');
                 $record = $studentRecords->first();
 
                 return [
@@ -150,14 +177,11 @@ class AttendanceController extends Controller
     {
         $classes = Auth::user()
             ->classes()
-            ->with(['students' => function ($query) {
-                $query->orderBy('name')->orderBy('student_id');
-            }])
             ->orderBy('name')
             ->get();
 
         $classStudents = $classes->mapWithKeys(function ($class) {
-            return [$class->id => $class->students->map(function ($student) {
+            return [$class->id => $this->getClassStudents($class)->map(function ($student) {
                 return [
                     'id' => $student->id,
                     'name' => $student->name,
@@ -167,7 +191,14 @@ class AttendanceController extends Controller
             })->values()];
         })->all();
 
-        return view('teacher.attendance.scan', compact('classes', 'classStudents'));
+        $pendingExcuses = AttendanceExcuse::with(['student', 'classRoom'])
+            ->where('teacher_id', Auth::id())
+            ->where('status', AttendanceExcuse::STATUS_PENDING)
+            ->latest()
+            ->take(30)
+            ->get();
+
+        return view('teacher.attendance.scan', compact('classes', 'classStudents', 'pendingExcuses'));
     }
 
     public function records(Request $request)
@@ -250,7 +281,7 @@ class AttendanceController extends Controller
         $date = now()->toDateString();
         $created = 0;
 
-        foreach ($classRoom->students as $student) {
+        foreach ($this->getClassStudents($classRoom) as $student) {
             $record = AttendanceRecord::where('student_id', $student->id)
                 ->where('class_room_id', $classRoom->id)
                 ->whereDate('date', $date)
@@ -273,7 +304,7 @@ class AttendanceController extends Controller
         return response()->json([
             'message' => 'Attendance initialized for selected class.',
             'created' => $created,
-            'summary' => buildAttendanceSummary($classRoom->id, $date),
+            'summary' => $this->buildAttendanceSummary($classRoom, $date),
         ]);
     }
 
@@ -289,13 +320,17 @@ class AttendanceController extends Controller
 
         $todayDate = now()->toDateString();
 
-        foreach ($classRoom->students as $student) {
+        foreach ($this->getClassStudents($classRoom) as $student) {
             $record = AttendanceRecord::where('student_id', $student->id)
                 ->where('class_room_id', $classRoom->id)
                 ->whereDate('date', $todayDate)
                 ->first();
 
             if ($record) {
+                if ($record->status === 'excused') {
+                    continue;
+                }
+
                 $record->update([
                     'status' => 'present',
                     'teacher_id' => Auth::id(),
@@ -320,7 +355,7 @@ class AttendanceController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'All students marked present for the selected class.',
-                'summary' => buildAttendanceSummary($classRoom->id, $todayDate),
+                'summary' => $this->buildAttendanceSummary($classRoom, $todayDate),
             ]);
         }
 
@@ -344,7 +379,7 @@ class AttendanceController extends Controller
 
         $presentStudentIds = $records->where('status', 'present')->pluck('student_id')->all();
 
-        foreach ($classRoom->students as $student) {
+        foreach ($this->getClassStudents($classRoom) as $student) {
             $record = $records->firstWhere('student_id', $student->id);
 
             if (! $record) {
@@ -358,6 +393,10 @@ class AttendanceController extends Controller
                     'qr_code' => $student->student_id,
                 ]);
 
+                continue;
+            }
+
+            if ($record->status === 'excused') {
                 continue;
             }
 
@@ -388,7 +427,7 @@ class AttendanceController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'Quick attendance finalized for the selected class.',
-                'summary' => buildAttendanceSummary($classRoom->id, $todayDate),
+                'summary' => $this->buildAttendanceSummary($classRoom, $todayDate),
             ]);
         }
 
@@ -456,7 +495,7 @@ class AttendanceController extends Controller
                         'message' => "Attendance already recorded for {$student->name} today.",
                         'status' => 'already_present',
                         'student' => $student->only(['id', 'name', 'student_id', 'profile_picture']),
-                        'summary' => buildAttendanceSummary($classRoom->id, $todayDate),
+                        'summary' => $this->buildAttendanceSummary($classRoom, $todayDate),
                     ], 409);
                 }
 
@@ -476,7 +515,7 @@ class AttendanceController extends Controller
                     'message' => "Attendance recorded for {$student->name}.",
                     'status' => 'present',
                     'student' => $student->only(['id', 'name', 'student_id', 'profile_picture']),
-                    'summary' => buildAttendanceSummary($classRoom->id, $todayDate),
+                    'summary' => $this->buildAttendanceSummary($classRoom, $todayDate),
                 ]);
             }
 
@@ -499,10 +538,54 @@ class AttendanceController extends Controller
                 'message' => "Attendance recorded for {$student->name}.",
                 'status' => 'present',
                 'student' => $student->only(['id', 'name', 'student_id', 'profile_picture']),
-                'summary' => buildAttendanceSummary($classRoom->id, $todayDate),
+                'summary' => $this->buildAttendanceSummary($classRoom, $todayDate),
             ]);
         }
 
         return back()->with('success', "Attendance recorded for {$student->name}.");
+    }
+
+    public function reviewExcuse(Request $request, AttendanceExcuse $attendanceExcuse)
+    {
+        $data = $request->validate([
+            'decision' => ['required', 'in:approve,reject'],
+        ]);
+
+        abort_unless((int) $attendanceExcuse->teacher_id === (int) Auth::id(), 403);
+
+        DB::transaction(function () use ($attendanceExcuse, $data) {
+            $excuse = AttendanceExcuse::query()
+                ->lockForUpdate()
+                ->findOrFail($attendanceExcuse->id);
+            abort_unless($excuse->status === AttendanceExcuse::STATUS_PENDING, 422);
+
+            if ($data['decision'] === 'approve') {
+                AttendanceRecord::updateOrCreate(
+                    [
+                        'student_id' => $excuse->student_id,
+                        'class_room_id' => $excuse->class_room_id,
+                        'date' => $excuse->date->toDateString(),
+                    ],
+                    [
+                        'teacher_id' => Auth::id(),
+                        'status' => 'excused',
+                        'notes' => $excuse->reason,
+                        'qr_code' => $excuse->student->student_id,
+                    ]
+                );
+            }
+
+            $excuse->update([
+                'status' => $data['decision'] === 'approve'
+                    ? AttendanceExcuse::STATUS_APPROVED
+                    : AttendanceExcuse::STATUS_REJECTED,
+                'reviewed_at' => now(),
+            ]);
+        });
+
+        return back()->with(
+            'success',
+            $data['decision'] === 'approve' ? 'Absence excuse approved.' : 'Absence excuse rejected.'
+        );
     }
 }

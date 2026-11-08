@@ -31,11 +31,13 @@ class AppServiceProvider extends ServiceProvider
 
             $user = Auth::user();
             if ($user->role === User::ROLE_SUPERADMIN) {
-                $pendingTeacherCount = User::where('role', User::ROLE_TEACHER)
+                $pendingTeachers = User::where('role', User::ROLE_TEACHER)
                     ->where('status', User::STATUS_PENDING)
-                    ->count();
+                    ->orderBy('created_at')
+                    ->get(['id', 'name', 'email', 'created_at']);
 
-                $view->with('pendingTeacherCount', $pendingTeacherCount);
+                $view->with('pendingTeachers', $pendingTeachers)
+                    ->with('pendingTeacherCount', $pendingTeachers->count());
 
                 return;
             }

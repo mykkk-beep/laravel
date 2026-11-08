@@ -6,6 +6,43 @@
 @section('content')
 <div class="card">
     <div class="card-body">
+        @if($pendingExcuses->isNotEmpty())
+            <div class="mb-6 rounded-[24px] border border-amber-300 bg-amber-50 p-5">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-semibold text-amber-900">Absence excuses need review</h2>
+                        <p class="text-sm text-amber-800">Students and guardians may submit an explanation for an absence.</p>
+                    </div>
+                    <span class="rounded-full bg-amber-200 px-3 py-1 text-sm font-bold text-amber-900">{{ $pendingExcuses->count() }}</span>
+                </div>
+                <div class="space-y-3">
+                    @foreach($pendingExcuses as $excuse)
+                        <div class="rounded-2xl border border-amber-200 bg-white p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <div class="font-semibold text-slate-900">{{ $excuse->student->name }} <span class="font-normal text-slate-500">({{ $excuse->classRoom->name }})</span></div>
+                                    <div class="text-sm text-slate-500">{{ $excuse->date->format('M d, Y') }}</div>
+                                    <p class="mt-2 whitespace-pre-wrap text-sm text-slate-700">{{ $excuse->reason }}</p>
+                                </div>
+                                <div class="flex shrink-0 gap-2">
+                                    <form method="POST" action="{{ route('teacher.attendance.excuses.review', $excuse) }}">
+                                        @csrf
+                                        <input type="hidden" name="decision" value="approve">
+                                        <button class="btn btn-success" type="submit">Approve</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('teacher.attendance.excuses.review', $excuse) }}">
+                                        @csrf
+                                        <input type="hidden" name="decision" value="reject">
+                                        <button class="btn btn-outline-danger" type="submit">Reject</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                <a class="mt-3 inline-block text-sm font-semibold text-indigo-700 underline" href="{{ route('teacher.notifications') }}">View excuse notifications</a>
+            </div>
+        @endif
         <div class="mb-6">
             <h2 class="text-2xl font-semibold text-slate-900">Scan Student QR Code</h2>
             <p class="mt-1 text-sm text-slate-500">Select a class, open the camera, and scan a student QR code to mark attendance.</p>
@@ -222,6 +259,7 @@
         const total = summary?.total ?? 0;
         const present = summary?.present ?? 0;
         const absent = summary?.absent ?? 0;
+        const excused = summary?.excused ?? 0;
 
         attendanceSummary.innerHTML = `
             <div class="col-6">
@@ -234,6 +272,12 @@
                 <div class="border rounded p-2 bg-white text-center">
                     <small class="text-muted d-block">Absent</small>
                     <strong>${absent}</strong>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="border rounded p-2 bg-white text-center">
+                    <small class="text-muted d-block">Excused</small>
+                    <strong>${excused}</strong>
                 </div>
             </div>
             <div class="col-12">

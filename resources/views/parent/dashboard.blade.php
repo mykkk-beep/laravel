@@ -45,18 +45,18 @@
             <div class="p-4 sm:p-6">
                 <!-- Today's Attendance Status -->
                 @if($attendance)
-                    <div class="mb-6 rounded-xl border-2 p-4 {{ $attendance->status === 'present' ? 'border-emerald-200 bg-emerald-50' : ($attendance->status === 'late' ? 'border-amber-200 bg-amber-50' : 'border-rose-200 bg-rose-50') }}">
+                    <div class="mb-6 rounded-xl border-2 p-4 {{ $attendance->status === 'present' ? 'border-emerald-200 bg-emerald-50' : ($attendance->status === 'late' ? 'border-amber-200 bg-amber-50' : ($attendance->status === 'excused' ? 'border-sky-200 bg-sky-50' : 'border-rose-200 bg-rose-50')) }}">
                         <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                            <span class="font-bold text-sm sm:text-base {{ $attendance->status === 'present' ? 'text-emerald-900' : ($attendance->status === 'late' ? 'text-amber-900' : 'text-rose-900') }}">
+                            <span class="font-bold text-sm sm:text-base {{ $attendance->status === 'present' ? 'text-emerald-900' : ($attendance->status === 'late' ? 'text-amber-900' : ($attendance->status === 'excused' ? 'text-sky-900' : 'text-rose-900')) }}">
                                 Today: <span class="uppercase tracking-wide">{{ ucfirst($attendance->status) }}</span>
                             </span>
-                            <span class="text-xs {{ $attendance->status === 'present' ? 'text-emerald-700' : ($attendance->status === 'late' ? 'text-amber-700' : 'text-rose-700') }}">
+                            <span class="text-xs {{ $attendance->status === 'present' ? 'text-emerald-700' : ($attendance->status === 'late' ? 'text-amber-700' : ($attendance->status === 'excused' ? 'text-sky-700' : 'text-rose-700')) }}">
                                 {{ $attendance->time_in ? \Carbon\Carbon::parse($attendance->time_in)->format('g:i A') : $attendance->updated_at->format('g:i A') }}
                             </span>
                         </div>
                         @if($attendance->notes)
-                            <div class="mt-3 pt-3 border-t {{ $attendance->status === 'present' ? 'border-emerald-200' : ($attendance->status === 'late' ? 'border-amber-200' : 'border-rose-200') }}">
-                                <p class="text-xs font-semibold opacity-75">Teacher note:</p>
+                            <div class="mt-3 pt-3 border-t {{ $attendance->status === 'present' ? 'border-emerald-200' : ($attendance->status === 'late' ? 'border-amber-200' : ($attendance->status === 'excused' ? 'border-sky-200' : 'border-rose-200')) }}">
+                                <p class="text-xs font-semibold opacity-75">{{ $attendance->status === 'excused' ? 'Excuse reason:' : 'Teacher note:' }}</p>
                                 <p class="text-xs mt-1">{{ $attendance->notes }}</p>
                             </div>
                         @endif
@@ -77,7 +77,7 @@
                                     <span class="block text-xs sm:text-sm font-semibold text-slate-900">{{ \Carbon\Carbon::parse($record->date)->format('M d, Y') }}</span>
                                     <div class="text-xs text-slate-500">{{ $record->time_in ? \Carbon\Carbon::parse($record->time_in)->format('g:i A') : 'No time recorded' }}</div>
                                 </div>
-                                <span class="shrink-0 rounded-full px-2 sm:px-3 py-1 text-xs font-semibold whitespace-nowrap {{ $record->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($record->status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
+                                <span class="shrink-0 rounded-full px-2 sm:px-3 py-1 text-xs font-semibold whitespace-nowrap {{ $record->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($record->status === 'late' ? 'bg-amber-100 text-amber-700' : ($record->status === 'excused' ? 'bg-sky-100 text-sky-700' : 'bg-rose-100 text-rose-700')) }}">
                                     {{ ucfirst($record->status) }}
                                 </span>
                             </div>
@@ -124,6 +124,59 @@
                         <div class="text-sm text-slate-500">No schedule available.</div>
                     </div>
                 @endif
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-6 grid gap-4 lg:grid-cols-2">
+    <div class="card">
+        <div class="card-body">
+            <h2 class="text-lg font-semibold text-slate-900">Report an absence</h2>
+            <p class="mb-4 text-sm text-slate-500">Send the teacher an explanation for your child's absence. The excuse is pending until reviewed.</p>
+            @if($classSchedules->isNotEmpty())
+                <form method="POST" action="{{ route('parent.attendance-excuses.store') }}" class="space-y-3">
+                    @csrf
+                    <div>
+                        <label class="form-label" for="parent-excuse-class">Class</label>
+                        <select id="parent-excuse-class" name="class_room_id" class="form-input" required>
+                            @foreach($classSchedules as $classRoom)
+                                <option value="{{ $classRoom->id }}">{{ $classRoom->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="parent-excuse-date">Date</label>
+                        <input id="parent-excuse-date" type="date" name="date" class="form-input" value="{{ old('date', now()->toDateString()) }}" required>
+                    </div>
+                    <div>
+                        <label class="form-label" for="parent-excuse-reason">Reason</label>
+                        <textarea id="parent-excuse-reason" name="reason" class="form-input" rows="3" maxlength="2000" required>{{ old('reason') }}</textarea>
+                    </div>
+                    @error('date')<p class="text-sm text-rose-600">{{ $message }}</p>@enderror
+                    @error('reason')<p class="text-sm text-rose-600">{{ $message }}</p>@enderror
+                    <button class="btn btn-primary" type="submit">Send excuse</button>
+                </form>
+            @else
+                <p class="text-sm text-slate-500">Your child is not currently assigned to a class.</p>
+            @endif
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <h2 class="mb-3 text-lg font-semibold text-slate-900">Excuse requests</h2>
+            <div class="space-y-2">
+                @forelse($attendanceExcuses as $excuse)
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-medium text-slate-800">{{ $excuse->classRoom->name }} · {{ $excuse->date->format('M d, Y') }}</span>
+                            <span class="rounded-full px-2 py-1 text-xs font-semibold {{ $excuse->status === 'approved' ? 'bg-emerald-100 text-emerald-700' : ($excuse->status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700') }}">{{ ucfirst($excuse->status) }}</span>
+                        </div>
+                        <p class="mt-1 text-sm text-slate-600">{{ $excuse->reason }}</p>
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-500">No excuse requests yet.</p>
+                @endforelse
             </div>
         </div>
     </div>

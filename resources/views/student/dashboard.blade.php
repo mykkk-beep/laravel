@@ -69,8 +69,9 @@
                                 <div class="min-w-0">
                                     <span class="block text-xs sm:text-sm font-semibold text-slate-900">{{ $record->created_at->format('M d, Y') }}</span>
                                     <div class="text-xs text-slate-500 truncate">{{ $record->classRoom?->name ?? 'No class' }}</div>
+                                    <div class="text-xs text-slate-500">{{ $record->time_in ? \Carbon\Carbon::parse($record->time_in)->format('g:i A') : 'No time recorded' }}</div>
                                 </div>
-                                <span class="shrink-0 rounded-full px-2 sm:px-3 py-1 text-xs font-semibold whitespace-nowrap {{ $record->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($record->status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
+                                <span class="shrink-0 rounded-full px-2 sm:px-3 py-1 text-xs font-semibold whitespace-nowrap {{ $record->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($record->status === 'late' ? 'bg-amber-100 text-amber-700' : ($record->status === 'excused' ? 'bg-sky-100 text-sky-700' : 'bg-rose-100 text-rose-700')) }}">
                                     {{ ucfirst($record->status) }}
                                 </span>
                             </div>
@@ -126,11 +127,11 @@
                                 <div class="rounded-lg bg-slate-50 p-3">
                                     <div class="flex items-center justify-between gap-2">
                                         <span class="text-xs font-semibold text-slate-800">{{ $record->classRoom?->name ?? 'Unknown class' }}</span>
-                                        <span class="rounded-full px-2 py-1 text-[10px] font-semibold whitespace-nowrap {{ $record->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($record->status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
+                                        <span class="rounded-full px-2 py-1 text-[10px] font-semibold whitespace-nowrap {{ $record->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($record->status === 'late' ? 'bg-amber-100 text-amber-700' : ($record->status === 'excused' ? 'bg-sky-100 text-sky-700' : 'bg-rose-100 text-rose-700')) }}">
                                             {{ ucfirst($record->status) }}
                                         </span>
                                     </div>
-                                    <div class="mt-1 text-[11px] text-slate-500">{{ $record->created_at?->format('M d, Y') ?? '—' }}</div>
+                                    <div class="mt-1 text-[11px] text-slate-500">{{ $record->created_at?->format('M d, Y') ?? '—' }} · {{ $record->time_in ? \Carbon\Carbon::parse($record->time_in)->format('g:i A') : 'No time recorded' }}</div>
                                 </div>
                             @endforeach
                         </div>
@@ -140,6 +141,59 @@
                         </div>
                     @endif
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-6 grid gap-4 lg:grid-cols-2">
+    <div class="card">
+        <div class="card-body">
+            <h2 class="text-lg font-semibold text-slate-900">Report an absence</h2>
+            <p class="mb-4 text-sm text-slate-500">Send your teacher the reason you will be or were absent. The excuse is pending until reviewed.</p>
+            @if($classSchedules->isNotEmpty())
+                <form method="POST" action="{{ route('student.attendance-excuses.store') }}" class="space-y-3">
+                    @csrf
+                    <div>
+                        <label class="form-label" for="student-excuse-class">Class</label>
+                        <select id="student-excuse-class" name="class_room_id" class="form-input" required>
+                            @foreach($classSchedules as $classRoom)
+                                <option value="{{ $classRoom->id }}">{{ $classRoom->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="student-excuse-date">Date</label>
+                        <input id="student-excuse-date" type="date" name="date" class="form-input" value="{{ old('date', now()->toDateString()) }}" required>
+                    </div>
+                    <div>
+                        <label class="form-label" for="student-excuse-reason">Reason</label>
+                        <textarea id="student-excuse-reason" name="reason" class="form-input" rows="3" maxlength="2000" required>{{ old('reason') }}</textarea>
+                    </div>
+                    @error('date')<p class="text-sm text-rose-600">{{ $message }}</p>@enderror
+                    @error('reason')<p class="text-sm text-rose-600">{{ $message }}</p>@enderror
+                    <button class="btn btn-primary" type="submit">Send excuse</button>
+                </form>
+            @else
+                <p class="text-sm text-slate-500">You are not currently assigned to a class.</p>
+            @endif
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <h2 class="mb-3 text-lg font-semibold text-slate-900">Excuse requests</h2>
+            <div class="space-y-2">
+                @forelse($attendanceExcuses as $excuse)
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-medium text-slate-800">{{ $excuse->classRoom->name }} · {{ $excuse->date->format('M d, Y') }}</span>
+                            <span class="rounded-full px-2 py-1 text-xs font-semibold {{ $excuse->status === 'approved' ? 'bg-emerald-100 text-emerald-700' : ($excuse->status === 'rejected' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700') }}">{{ ucfirst($excuse->status) }}</span>
+                        </div>
+                        <p class="mt-1 text-sm text-slate-600">{{ $excuse->reason }}</p>
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-500">No excuse requests yet.</p>
+                @endforelse
             </div>
         </div>
     </div>

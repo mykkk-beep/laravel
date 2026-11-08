@@ -13,7 +13,7 @@ class TeacherRegistrationApprovalTest extends TestCase
     public function test_admin_bell_displays_pending_teacher_registration_count(): void
     {
         $superadmin = User::factory()->create(['role' => User::ROLE_SUPERADMIN]);
-        User::factory()->create([
+        $pendingTeacher = User::factory()->create([
             'name' => 'Pending Teacher',
             'role' => User::ROLE_TEACHER,
             'status' => User::STATUS_PENDING,
@@ -24,6 +24,12 @@ class TeacherRegistrationApprovalTest extends TestCase
             ->get(route('superadmin.dashboard'))
             ->assertOk()
             ->assertSee('Pending teacher registrations')
+            ->assertSee('Account registrations')
+            ->assertSee('Pending Teacher')
+            ->assertSee('Accept')
+            ->assertSee('Refuse')
+            ->assertSee('action="' . route('superadmin.teachers.approve', $pendingTeacher) . '"', false)
+            ->assertSee('action="' . route('superadmin.teachers.decline', $pendingTeacher) . '"', false)
             ->assertSee('>1</span>', false);
     }
 

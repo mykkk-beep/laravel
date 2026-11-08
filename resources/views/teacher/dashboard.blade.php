@@ -48,7 +48,7 @@
         <div class="card">
             <div class="card-body">
                 <h3 class="card-title">Today's Attendance Summary</h3>
-                <div class="grid grid-cols-3 gap-2 text-center sm:gap-4">
+                <div class="grid grid-cols-4 gap-2 text-center sm:gap-4">
                     <div>
                         <div class="text-2xl font-semibold text-emerald-600 sm:text-3xl">{{ $presentCount }}</div>
                         <div class="text-xs text-slate-500 sm:text-sm">Present</div>
@@ -60,6 +60,10 @@
                     <div>
                         <div class="text-2xl font-semibold text-rose-600 sm:text-3xl">{{ $absentCount }}</div>
                         <div class="text-xs text-slate-500 sm:text-sm">Absent</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-semibold text-sky-600 sm:text-3xl">{{ $excusedCount }}</div>
+                        <div class="text-xs text-slate-500 sm:text-sm">Excused</div>
                     </div>
                 </div>
                 <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -77,7 +81,7 @@
                         <li class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                             <div class="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                                 <span class="break-words font-semibold text-slate-900">{{ $activity->student->name ?? 'Unknown student' }}</span>
-                                <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] {{ $activity->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($activity->status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700') }}">{{ ucfirst($activity->status) }}</span>
+                                <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] {{ $activity->status === 'present' ? 'bg-emerald-100 text-emerald-700' : ($activity->status === 'late' ? 'bg-amber-100 text-amber-700' : ($activity->status === 'excused' ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-700')) }}">{{ ucfirst($activity->status) }}</span>
                             </div>
                             <div class="mt-1 text-sm text-slate-500">{{ $activity->date }} • {{ $activity->time_in ? \Carbon\Carbon::parse($activity->time_in)->format('g:i A') : '—' }}</div>
                         </li>
@@ -141,7 +145,7 @@
     <script>
         (function() {
             const ctx = document.getElementById('attendanceChart').getContext('2d');
-            const data = @json($dailyAttendance ?? ['labels'=>[], 'present'=>[], 'absent'=>[]]);
+            const data = @json($dailyAttendance);
 
             new Chart(ctx, {
                 type: 'line',
@@ -160,6 +164,20 @@
                             data: data.absent,
                             borderColor: 'rgba(248,113,113,1)',
                             backgroundColor: 'rgba(248,113,113,0.15)',
+                            fill: true,
+                        },
+                        {
+                            label: 'Late',
+                            data: data.late,
+                            borderColor: 'rgba(245,158,11,1)',
+                            backgroundColor: 'rgba(245,158,11,0.15)',
+                            fill: true,
+                        },
+                        {
+                            label: 'Excused',
+                            data: data.excused,
+                            borderColor: 'rgba(14,165,233,1)',
+                            backgroundColor: 'rgba(14,165,233,0.15)',
                             fill: true,
                         }
                     ]

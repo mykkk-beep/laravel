@@ -11,10 +11,45 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <style>
+            .guest-background {
+                position: relative;
+                isolation: isolate;
+                overflow: hidden;
+            }
+
+            .guest-background::before,
+            .guest-background::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                z-index: -1;
+            }
+
+            .guest-background::before {
+                inset: -8px;
+                background: url("{{ asset('images/classroom-background.jpg') }}") center / cover no-repeat;
+                filter: blur(6px);
+            }
+
+            .guest-background::after {
+                background: rgba(255, 255, 255, 0.35);
+            }
+
+            .guest-card {
+                width: min(750px, 100%);
+                padding: clamp(40px, 10vw, 120px);
+                background:
+                    linear-gradient(rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.82)),
+                    url("{{ asset('images/classroom-background.jpg') }}") center / cover no-repeat;
+                border-radius: 36px;
+                box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            }
+        </style>
     </head>
     <body class="font-sans antialiased bg-slate-50 text-slate-900">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-10 sm:pt-0 bg-slate-50">
-            <div class="w-full sm:max-w-md mt-6 px-6 py-8 bg-white/95 shadow-card rounded-[32px] border border-slate-200/80">
+        <div class="guest-background min-h-screen flex flex-col sm:justify-center items-center pt-10 sm:pt-0">
+            <div class="guest-card relative z-10 mt-6">
                 @hasSection('content')
                     @yield('content')
                 @else

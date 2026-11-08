@@ -2,6 +2,8 @@
 
 @section('pageTitle', 'Super Admin Dashboard')
 @section('pageSubtitle', 'Manage teachers, monitor activity, and keep the platform running smoothly.')
+@section('pageTitleClass', 'text-lg sm:text-xl')
+@section('pageSubtitleClass', 'text-sm sm:text-base')
 
 @section('content')
 <div class="space-y-6" x-data="{ teacherAccountType: null }">

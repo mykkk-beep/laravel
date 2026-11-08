@@ -136,6 +136,53 @@ class TeacherAttendanceScanTest extends TestCase
         $response->assertSee('finalize-quick-attendance');
     }
 
+    public function test_scan_page_and_status_include_students_linked_through_enrollments(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $classRoom = ClassRoom::create([
+            'name' => 'Art 101',
+            'classroom' => 'Room 8',
+            'date' => '2026-06-30',
+            'time' => '11:00',
+            'teacher_id' => $teacher->id,
+        ]);
+        $subject = \App\Models\Subject::create([
+            'name' => 'Drawing',
+            'code' => 'ART-906',
+            'teacher_id' => $teacher->id,
+            'class_room_id' => $classRoom->id,
+        ]);
+        $student = Student::create([
+            'student_id' => 'ST-906',
+            'name' => 'Ava Chen',
+            'sex' => 'female',
+            'mobile' => '1231231240',
+            'email' => 'ava@example.com',
+            'class_room_id' => null,
+            'status' => 'enrolled',
+        ]);
+        \App\Models\Enrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'class_room_id' => $classRoom->id,
+            'status' => 'enrolled',
+            'grade' => 0,
+        ]);
+
+        $this->actingAs($teacher);
+
+        $this->get(route('teacher.attendance.scan'))
+            ->assertOk()
+            ->assertSee('ST-906')
+            ->assertSee('Ava Chen');
+
+        $this->postJson(route('teacher.attendance.initialize'), [
+            'class_room_id' => $classRoom->id,
+        ])->assertOk()
+            ->assertJsonPath('summary.total', 1)
+            ->assertJsonPath('summary.absent', 1);
+    }
+
     public function test_teacher_can_finalize_quick_attendance_for_the_selected_class(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);

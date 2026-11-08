@@ -17,7 +17,7 @@
     </div>
 </div>
 
-<div class="no-print grid gap-4 md:grid-cols-4">
+<div class="no-print grid gap-4 md:grid-cols-5">
     <div class="card">
         <div class="card-body">
             <div class="text-sm font-medium text-slate-500">Total Entries</div>
@@ -34,6 +34,12 @@
         <div class="card-body">
             <div class="text-sm font-medium text-slate-500">Absent</div>
             <div class="mt-2 text-2xl font-semibold text-rose-600">{{ $summary['absent'] }}</div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <div class="text-sm font-medium text-slate-500">Excused</div>
+            <div class="mt-2 text-2xl font-semibold text-amber-600">{{ $summary['excused'] }}</div>
         </div>
     </div>
     <div class="card">
@@ -63,6 +69,7 @@
                     <option value="present" {{ request('status') == 'present' ? 'selected' : '' }}>Present</option>
                     <option value="late" {{ request('status') == 'late' ? 'selected' : '' }}>Late</option>
                     <option value="absent" {{ request('status') == 'absent' ? 'selected' : '' }}>Absent</option>
+                    <option value="excused" {{ request('status') == 'excused' ? 'selected' : '' }}>Excused</option>
                 </select>
             </div>
             <div>
@@ -115,7 +122,7 @@
                                 <td>{{ $status['name'] }}</td>
                                 @foreach(['am', 'pm'] as $period)
                                     <td>
-                                        <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] {{ $status[$period] === 'present' ? 'bg-emerald-100 text-emerald-700' : ($status[$period] === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
+                                        <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] {{ $status[$period] === 'present' ? 'bg-emerald-100 text-emerald-700' : ($status[$period] === 'late' ? 'bg-amber-100 text-amber-700' : ($status[$period] === 'excused' ? 'bg-sky-100 text-sky-700' : 'bg-rose-100 text-rose-700')) }}">
                                             {{ ucfirst($status[$period]) }}
                                         </span>
                                     </td>

@@ -20,7 +20,7 @@
 
 <div class="flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
     <div>
-        <h2 class="text-2xl font-semibold text-slate-900">Manage Students</h2>
+        <h2 class="text-2xl font-semibold text-slate-900">Manage Students Accounts</h2>
         <p class="mt-1 text-sm text-slate-500">Review student profiles and keep class records up to date.</p>
     </div>
     <a class="btn btn-success" href="{{ route('teacher.students.create') }}">Add Student</a>
@@ -79,7 +79,6 @@
                                         <th>Student ID</th>
                                         <th>Name</th>
                                         <th>Sex</th>
-                                        <th>Class</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -89,7 +88,6 @@
                                             <td>{{ $student->student_id ?? '---' }}</td>
                                             <td>{{ trim(implode(' ', array_filter([$student->name, $student->middle_name ?? '', $student->last_name ?? ''], fn ($value) => $value !== null && $value !== ''))) ?: $student->name }}</td>
                                             <td>{{ ucfirst($student->sex ?? '---') }}</td>
-                                            <td>{{ $student->classRoom?->name ?? '---' }}</td>
                                             <td>
                                                 <div class="flex flex-wrap gap-2">
                                                     <a class="btn btn-sm btn-warning" href="{{ route('teacher.students.edit', $student) }}">Edit</a>

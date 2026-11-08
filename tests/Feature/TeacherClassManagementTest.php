@@ -118,4 +118,43 @@ class TeacherClassManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Alex Ray');
     }
+
+    public function test_teacher_can_duplicate_a_class_without_changing_its_details(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $sourceClass = ClassRoom::create([
+            'name' => 'Math 101', 'classroom' => 'Room 1', 'date' => '2026-07-06',
+            'time' => '09:00', 'end_time' => '10:00', 'teacher_id' => $teacher->id,
+        ]);
+        $student = Student::create([
+            'student_id' => 'ST-101', 'name' => 'Jordan Lee', 'sex' => 'female',
+            'class_room_id' => $sourceClass->id, 'status' => 'enrolled',
+        ]);
+        Enrollment::create([
+            'student_id' => $student->id, 'class_room_id' => $sourceClass->id,
+            'status' => 'enrolled', 'grade' => 88,
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('teacher.classes.duplicate', $sourceClass))
+            ->assertRedirect(route('teacher.classes.index'))
+            ->assertSessionHas('success', 'Class duplicated successfully.');
+
+        $copy = ClassRoom::where('teacher_id', $teacher->id)
+            ->where('id', '!=', $sourceClass->id)
+            ->firstOrFail();
+        $sourceClass->refresh();
+
+        $this->assertSame($sourceClass->name, $copy->name);
+        $this->assertSame($sourceClass->classroom, $copy->classroom);
+        $this->assertSame($sourceClass->date, $copy->date);
+        $this->assertSame($sourceClass->time, $copy->time);
+        $this->assertSame($sourceClass->end_time, $copy->end_time);
+        $this->assertDatabaseHas('enrollments', [
+            'student_id' => $student->id,
+            'class_room_id' => $copy->id,
+            'status' => 'enrolled',
+            'grade' => 0,
+        ]);
+    }
 }

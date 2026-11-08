@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttendanceRecord;
+use App\Models\AttendanceExcuse;
+use App\Models\ClassRoom;
 use App\Models\Enrollment;
 use App\Models\NotificationReply;
 use App\Models\Student;
 use App\Models\StudentNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 
 class StudentPortalController extends Controller
@@ -104,6 +107,11 @@ class StudentPortalController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
         $notificationCount = $teacherMessages->count();
+        $attendanceExcuses = AttendanceExcuse::with('classRoom')
+            ->where('student_id', $student->id)
+            ->latest('date')
+            ->take(10)
+            ->get();
 
         return view('student.dashboard', [
             'student' => $student,
@@ -114,7 +122,53 @@ class StudentPortalController extends Controller
             'attendancePercentage' => $attendancePercentage,
             'otherClassAttendance' => $otherClassAttendance,
             'notificationCount' => $notificationCount,
+            'attendanceExcuses' => $attendanceExcuses,
         ]);
+    }
+
+    public function submitAttendanceExcuse(Request $request)
+    {
+        $student = Student::findOrFail(Session::get('student_id'));
+        $data = $request->validate([
+            'class_room_id' => ['required', 'exists:classes,id'],
+            'date' => ['required', 'date'],
+            'reason' => ['required', 'string', 'max:2000'],
+        ]);
+        $classRoom = ClassRoom::findOrFail($data['class_room_id']);
+        $isAssigned = (int) $student->class_room_id === (int) $classRoom->id
+            || $student->enrollments()
+                ->where('class_room_id', $classRoom->id)
+                ->where('status', Enrollment::STATUS_ENROLLED)
+                ->exists();
+        abort_unless($isAssigned && $classRoom->teacher_id, 403);
+
+        $excuse = AttendanceExcuse::firstOrNew([
+            'student_id' => $student->id,
+            'class_room_id' => $classRoom->id,
+            'date' => $data['date'],
+        ]);
+        if ($excuse->exists && $excuse->status !== AttendanceExcuse::STATUS_REJECTED) {
+            return back()->withErrors(['date' => 'An excuse for this class and date has already been submitted.']);
+        }
+
+        DB::transaction(function () use ($excuse, $student, $classRoom, $data) {
+            $excuse->fill([
+                'teacher_id' => $classRoom->teacher_id,
+                'reason' => $data['reason'],
+                'status' => AttendanceExcuse::STATUS_PENDING,
+                'reviewed_at' => null,
+            ])->save();
+
+            StudentNotification::create([
+                'student_id' => $student->id,
+                'teacher_id' => $classRoom->teacher_id,
+                'title' => 'Absence excuse submitted',
+                'message' => $student->name.' submitted an absence excuse for '.$classRoom->name.' on '.$data['date'].'. Reason: '.$data['reason'],
+                'recipient' => 'teacher',
+            ]);
+        });
+
+        return redirect()->route('student.dashboard')->with('success', 'Your excuse was sent to the teacher for review.');
     }
 
     /**

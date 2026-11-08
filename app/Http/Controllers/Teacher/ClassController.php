@@ -69,28 +69,7 @@ class ClassController extends Controller
                 ->with('enrollments')
                 ->findOrFail($sourceClassId);
 
-            foreach ($sourceClass->enrollments as $enrollment) {
-                $classRoom->enrollments()->firstOrCreate(
-                    ['student_id' => $enrollment->student_id],
-                    [
-                        'status' => $enrollment->status,
-                        'grade' => 0,
-                    ]
-                );
-            }
-
-            // Support older classes created before enrollments were introduced.
-            foreach ($sourceClass->students()->whereDoesntHave('enrollments', function ($query) use ($sourceClass) {
-                $query->where('class_room_id', $sourceClass->id);
-            })->get() as $student) {
-                $classRoom->enrollments()->firstOrCreate(
-                    ['student_id' => $student->id],
-                    [
-                        'status' => $student->status === 'not_enrolled' ? 'not_enrolled' : 'enrolled',
-                        'grade' => 0,
-                    ]
-                );
-            }
+            $this->copyEnrollments($sourceClass, $classRoom);
 
             return $classRoom;
         });
@@ -100,6 +79,49 @@ class ClassController extends Controller
             : 'Class created successfully.';
 
         return redirect()->route('teacher.classes.index')->with('success', $message);
+    }
+
+    public function duplicate(ClassRoom $classRoom)
+    {
+        abort_unless($classRoom->teacher_id === Auth::id(), 403);
+
+        DB::transaction(function () use ($classRoom) {
+            $copy = Auth::user()->classes()->create(
+                $classRoom->only(['name', 'classroom', 'date', 'time', 'end_time'])
+            );
+
+            $this->copyEnrollments($classRoom, $copy);
+        });
+
+        return redirect()->route('teacher.classes.index')->with('success', 'Class duplicated successfully.');
+    }
+
+    private function copyEnrollments(ClassRoom $sourceClass, ClassRoom $targetClass): void
+    {
+        $sourceClass->loadMissing('enrollments');
+
+        foreach ($sourceClass->enrollments as $enrollment) {
+            $targetClass->enrollments()->firstOrCreate(
+                ['student_id' => $enrollment->student_id],
+                [
+                    'status' => $enrollment->status,
+                    'grade' => 0,
+                ]
+            );
+        }
+
+        // Support older classes created before enrollments were introduced.
+        foreach ($sourceClass->students()->whereDoesntHave('enrollments', function ($query) use ($sourceClass) {
+            $query->where('class_room_id', $sourceClass->id);
+        })->get() as $student) {
+            $targetClass->enrollments()->firstOrCreate(
+                ['student_id' => $student->id],
+                [
+                    'status' => $student->status === 'not_enrolled' ? 'not_enrolled' : 'enrolled',
+                    'grade' => 0,
+                ]
+            );
+        }
     }
 
 
