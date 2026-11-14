@@ -21,8 +21,6 @@ class Student extends Model
         'student_id',
         'name',
         'sex',
-        'mobile',
-        'email',
         'class_room_id',
         'uuid',
         'status',

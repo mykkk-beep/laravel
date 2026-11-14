@@ -27,19 +27,13 @@
         <div class="card">
             <div class="card-body">
                 <div class="text-sm font-medium text-slate-500">Number of Classes</div>
-                <div class="mt-3 text-3xl font-semibold text-slate-900">{{ $classes->count() }}</div>
+                <a href="{{ route('teacher.classes.index') }}" aria-label="View all classes" class="mt-3 inline-block text-3xl font-semibold text-slate-900 hover:text-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{{ $classes->count() }}</a>
             </div>
         </div>
         <div class="card">
             <div class="card-body">
                 <div class="text-sm font-medium text-slate-500">Total Students</div>
-                <div class="mt-3 text-3xl font-semibold text-slate-900">{{ $totalStudents }}</div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-body">
-                <div class="text-sm font-medium text-slate-500">Total Enrolled Students</div>
-                <div class="mt-3 text-3xl font-semibold text-slate-900">{{ $totalEnrolledStudents }}</div>
+                <a href="{{ route('teacher.students.all') }}" aria-label="View all students" class="mt-3 inline-block text-3xl font-semibold text-slate-900 hover:text-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{{ $totalStudents }}</a>
             </div>
         </div>
     </div>

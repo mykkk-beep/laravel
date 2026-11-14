@@ -49,8 +49,7 @@ class StudentController extends Controller
             if ($search !== '') {
                 $studentsQuery->where(function ($query) use ($search) {
                     $query->where('name', 'like', "%{$search}%")
-                        ->orWhere('student_id', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
+                        ->orWhere('student_id', 'like', "%{$search}%");
                 });
             }
 
@@ -104,8 +103,6 @@ class StudentController extends Controller
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'sex' => ['required', 'in:male,female,other'],
-            'mobile' => ['nullable', 'string', 'max:20'],
-            'email' => ['nullable', 'email', 'max:255'],
             'class_room_id' => ['nullable', 'exists:classes,id'],
         ]);
 
@@ -127,8 +124,6 @@ class StudentController extends Controller
             'student_id' => $data['student_id'],
             'name' => $fullName,
             'sex' => $data['sex'],
-            'mobile' => $data['mobile'] ?? null,
-            'email' => $data['email'] ?? null,
             'class_room_id' => $classRoomId,
             'status' => $classRoomId ? Student::STATUS_ENROLLED : Student::STATUS_NOT_ENROLLED,
         ]);
@@ -155,8 +150,6 @@ class StudentController extends Controller
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'sex' => ['required', 'in:male,female,other'],
-            'mobile' => ['nullable', 'string', 'max:20'],
-            'email' => ['nullable', 'email', 'max:255'],
         ]);
 
         $fullName = $this->buildFullName($data);
@@ -165,8 +158,6 @@ class StudentController extends Controller
             'student_id' => $data['student_id'],
             'name' => $fullName,
             'sex' => $data['sex'],
-            'mobile' => $data['mobile'] ?? null,
-            'email' => $data['email'] ?? null,
             'class_room_id' => $classRoom->id,
             'status' => Student::STATUS_ENROLLED,
         ]);
@@ -276,8 +267,6 @@ class StudentController extends Controller
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
             'sex' => ['required', 'in:male,female,other'],
-            'mobile' => ['nullable', 'string', 'max:20'],
-            'email' => ['nullable', 'email', 'max:255'],
             'class_room_id' => ['required', 'exists:classes,id'],
         ]);
 

@@ -47,15 +47,15 @@ class ClassRoomSeeder extends Seeder
 
         // Students for Section B
         DB::table('students')->insert([
-            ['name' => 'Paolo Dela Cruz', 'email' => 'paolo@student.edu', 'class_room_id' => $roomB, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Maria Garcia',    'email' => 'maria@student.edu', 'class_room_id' => $roomB, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Luis Torres',     'email' => 'luis@student.edu',  'class_room_id' => $roomB, 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Paolo Dela Cruz', 'class_room_id' => $roomB, 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Maria Garcia',    'class_room_id' => $roomB, 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Luis Torres',     'class_room_id' => $roomB, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // Students for Section C
         DB::table('students')->insert([
-            ['name' => 'Anna Ramos',    'email' => 'anna@student.edu', 'class_room_id' => $roomC, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Carl Bautista', 'email' => 'carl@student.edu', 'class_room_id' => $roomC, 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Anna Ramos',    'class_room_id' => $roomC, 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Carl Bautista', 'class_room_id' => $roomC, 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 }

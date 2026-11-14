@@ -37,19 +37,19 @@
             }
 
             .guest-card {
-                width: min(750px, 100%);
-                padding: clamp(40px, 10vw, 120px);
+                width: min(100%, 28rem);
+                padding: clamp(24px, 6vw, 40px);
                 background:
                     linear-gradient(rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.82)),
                     url("{{ asset('images/classroom-background.jpg') }}") center / cover no-repeat;
-                border-radius: 36px;
+                border-radius: clamp(20px, 5vw, 28px);
                 box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
             }
         </style>
     </head>
     <body class="font-sans antialiased bg-slate-50 text-slate-900">
-        <div class="guest-background min-h-screen flex flex-col sm:justify-center items-center pt-10 sm:pt-0">
-            <div class="guest-card relative z-10 mt-6">
+        <div class="guest-background flex min-h-screen flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-10">
+            <div class="guest-card relative z-10">
                 @hasSection('content')
                     @yield('content')
                 @else

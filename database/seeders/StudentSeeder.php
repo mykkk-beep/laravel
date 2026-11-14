@@ -23,7 +23,7 @@ class StudentSeeder extends Seeder
 
         Student::firstOrCreate(
             ['student_id' => 'S1001'],
-            ['name' => 'Test Student', 'email' => 'student@example.com', 'class_room_id' => $class->id]
+            ['name' => 'Test Student', 'class_room_id' => $class->id]
         );
     }
 }

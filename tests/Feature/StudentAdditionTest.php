@@ -6,6 +6,7 @@ use App\Models\ClassRoom;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class StudentAdditionTest extends TestCase
@@ -36,8 +37,6 @@ class StudentAdditionTest extends TestCase
                 'student_id' => 'S001',
                 'name' => 'Jane Doe',
                 'sex' => 'female',
-                'mobile' => '1234567890',
-                'email' => 'jane@example.com',
                 'class_room_id' => $classRoom->id,
             ])
             ->assertRedirect(route('teacher.students.all'))
@@ -73,8 +72,6 @@ class StudentAdditionTest extends TestCase
                 'middle_name' => 'A',
                 'last_name' => 'Smith',
                 'sex' => 'male',
-                'mobile' => '0987654321',
-                'email' => 'john@example.com',
                 'class_room_id' => null,
             ])
             ->assertRedirect(route('teacher.students.all'))
@@ -101,8 +98,6 @@ class StudentAdditionTest extends TestCase
                 'student_id' => 'S003',
                 'name' => 'John Smith',
                 'sex' => 'male',
-                'mobile' => '0987654321',
-                'email' => 'john@example.com',
                 'class_room_id' => null,
             ])
             ->assertRedirect(route('teacher.students.all'))
@@ -115,8 +110,11 @@ class StudentAdditionTest extends TestCase
         ]);
     }
 
-    public function test_student_can_be_added_without_mobile_number(): void
+    public function test_student_records_do_not_have_mobile_or_email_columns(): void
     {
+        $this->assertFalse(Schema::hasColumn('students', 'mobile'));
+        $this->assertFalse(Schema::hasColumn('students', 'email'));
+
         $teacher = User::create([
             'name' => 'Teacher One',
             'email' => 'teacher@example.com',
@@ -130,7 +128,6 @@ class StudentAdditionTest extends TestCase
                 'student_id' => 'S004',
                 'name' => 'Alice Brown',
                 'sex' => 'female',
-                'email' => 'alice@example.com',
                 'class_room_id' => null,
             ])
             ->assertRedirect(route('teacher.students.all'))
@@ -139,7 +136,6 @@ class StudentAdditionTest extends TestCase
         $this->assertDatabaseHas('students', [
             'name' => 'Alice Brown',
             'student_id' => 'S004',
-            'mobile' => null,
         ]);
     }
 
