@@ -126,6 +126,7 @@ Route::middleware(['auth', 'role:teacher'])->group(function () {
     Route::get('/teacher/attendance', [TeacherAttendanceController::class, 'scan'])->name('teacher.attendance.scan');
     Route::get('/teacher/attendance/records', [TeacherAttendanceController::class, 'records'])->name('teacher.attendance.records');
     Route::get('/teacher/attendance/report', [TeacherAttendanceController::class, 'report'])->name('teacher.attendance.report');
+    Route::get('/teacher/attendance/calendar-export', [TeacherAttendanceController::class, 'calendarExport'])->name('teacher.attendance.calendar-export');
     Route::get('/teacher/attendance/export/{format}', [TeacherAttendanceController::class, 'export'])->name('teacher.attendance.export');
     Route::post('/teacher/attendance/initialize', [TeacherAttendanceController::class, 'initialize'])->name('teacher.attendance.initialize');
     Route::post('/teacher/attendance/record', [TeacherAttendanceController::class, 'record'])->name('teacher.attendance.record');

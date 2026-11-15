@@ -55,6 +55,37 @@ class StudentAdditionTest extends TestCase
             ->assertSee('successfully');
     }
 
+    public function test_adding_student_from_class_students_page_keeps_class_preselected(): void
+    {
+        $teacher = User::create([
+            'name' => 'Teacher One',
+            'email' => 'teacher@example.com',
+            'password' => bcrypt('password'),
+            'role' => User::ROLE_TEACHER,
+            'active' => true,
+        ]);
+
+        $classRoom = ClassRoom::create([
+            'name' => 'Math 101',
+            'classroom' => 'Room 1',
+            'date' => '2026-07-05',
+            'time' => '09:00',
+            'end_time' => '10:00',
+            'teacher_id' => $teacher->id,
+        ]);
+
+        $this->actingAs($teacher)
+            ->get(route('teacher.classes.students.index', $classRoom))
+            ->assertOk()
+            ->assertSee(route('teacher.classes.students.create', $classRoom));
+
+        $this->get(route('teacher.classes.students.create', $classRoom))
+            ->assertOk()
+            ->assertSee('Add Student to Math 101')
+            ->assertDontSee('<select name="class_room_id"', false)
+            ->assertSee('name="class_room_id" value="' . $classRoom->id . '"', false);
+    }
+
     public function test_student_full_name_is_shown_in_manage_students_list(): void
     {
         $teacher = User::create([

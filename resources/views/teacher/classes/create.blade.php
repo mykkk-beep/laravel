@@ -39,7 +39,7 @@
                 </div>
                 <div>
                     <label class="form-label">End Time</label>
-                    <input type="time" name="end_time" class="form-input" value="{{ old('end_time', $sourceClass?->end_time) }}">
+                    <input type="time" name="end_time" class="form-input" value="{{ old('end_time', $sourceClass?->end_time) }}" required>
                 </div>
             </div>
             <button class="btn btn-primary">{{ $sourceClass ? 'Duplicate Class' : 'Create Class' }}</button>

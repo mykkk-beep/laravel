@@ -42,12 +42,13 @@
                             <td><span class="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">{{ $class->enrolled_students_count ?? 0 }}</span></td>
                             <td>
                                 <div class="flex flex-wrap gap-2" role="group">
-                                    <a class="btn btn-sm btn-primary" href="{{ route('teacher.classes.students.index', $class) }}">Students</a>
+                                    <a class="btn btn-sm btn-success" href="{{ route('teacher.classes.students.index', $class) }}">Students</a>
+                                    <a class="btn btn-sm btn-primary" href="{{ route('teacher.attendance.scan', ['class_room_id' => $class->id]) }}">Scan</a>
                                     <form method="POST" action="{{ route('teacher.classes.duplicate', $class) }}">
                                         @csrf
                                         <button class="btn btn-sm btn-success">Duplicate</button>
                                     </form>
-                                    <a class="btn btn-sm btn-secondary" href="{{ route('teacher.classes.edit', $class) }}">Edit</a>
+                                    <a class="btn btn-sm btn-warning" href="{{ route('teacher.classes.edit', $class) }}">Edit</a>
                                     <form method="POST" action="{{ route('teacher.classes.destroy', $class) }}" onsubmit="return confirm('Delete this class?');">
                                         @csrf
                                         @method('DELETE')

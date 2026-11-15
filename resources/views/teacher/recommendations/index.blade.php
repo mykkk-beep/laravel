@@ -240,27 +240,32 @@
                 </label>
                 <label class="block text-sm font-medium text-slate-700">
                     <span class="mb-2 block">Subject</span>
-                    <input type="text" name="subject" value="" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none">
+                    <input type="text" name="subject" id="recommendation-subject" value="" aria-describedby="recommendation-subject-warning" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none">
+                    <span id="recommendation-subject-warning" class="mt-1 hidden text-sm font-normal text-rose-600" role="alert">Subject needs to be filled.</span>
                 </label>
             </div>
 
-            <label class="mt-4 block text-sm font-medium text-slate-700">
-                <span class="mb-2 block">Recommendation message for parent</span>
-                <textarea name="message" x-model="message" rows="5" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 outline-none" placeholder="Write a recommendation for the parent or guardian..."></textarea>
-            </label>
+            <div id="parent-message-field" class="mt-4">
+                <label class="block text-sm font-medium text-slate-700">
+                    <span class="mb-2 block">Recommendation message for parent</span>
+                    <textarea name="message" x-model="message" rows="5" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 outline-none" placeholder="Write a recommendation for the parent or guardian..."></textarea>
+                </label>
+            </div>
 
-            <label class="mt-4 block text-sm font-medium text-slate-700">
-                <span class="mb-2 block">Recommendation message for student</span>
-                <textarea name="student_message" rows="4" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 outline-none" placeholder="Write a separate message for the student..."></textarea>
-            </label>
+            <div id="student-message-field" class="mt-4 hidden">
+                <label class="block text-sm font-medium text-slate-700">
+                    <span class="mb-2 block">Recommendation message for student</span>
+                    <textarea name="student_message" rows="4" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 outline-none" placeholder="Write a separate message for the student..."></textarea>
+                </label>
+            </div>
 
             <div class="mt-5 flex flex-wrap items-center gap-3">
                 <label class="flex items-center gap-2 text-sm text-slate-600">
-                    <input type="checkbox" name="send_to_parent" value="1" checked class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                    <input type="checkbox" id="send-to-parent" name="send_to_parent" value="1" checked class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
                     <span>Send to parent</span>
                 </label>
                 <label class="flex items-center gap-2 text-sm text-slate-600">
-                    <input type="checkbox" name="send_to_student" value="1" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                    <input type="checkbox" id="send-to-student" name="send_to_student" value="1" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
                     <span>Send to student</span>
                 </label>
             </div>
@@ -274,6 +279,30 @@
                 const form = document.getElementById('recommendation-form');
                 const studentSelect = document.getElementById('student-select');
                 const studentSearch = document.getElementById('student-search');
+                const subjectInput = document.getElementById('recommendation-subject');
+                const subjectWarning = document.getElementById('recommendation-subject-warning');
+                const parentCheckbox = document.getElementById('send-to-parent');
+                const studentCheckbox = document.getElementById('send-to-student');
+                const parentMessageField = document.getElementById('parent-message-field');
+                const studentMessageField = document.getElementById('student-message-field');
+
+                const updateMessageVisibility = (checkbox, messageField) => {
+                    if (checkbox && messageField) {
+                        messageField.classList.toggle('hidden', !checkbox.checked);
+                    }
+                };
+
+                [parentCheckbox, studentCheckbox].forEach((checkbox) => {
+                    if (checkbox) {
+                        checkbox.addEventListener('change', function () {
+                            updateMessageVisibility(parentCheckbox, parentMessageField);
+                            updateMessageVisibility(studentCheckbox, studentMessageField);
+                        });
+                    }
+                });
+
+                updateMessageVisibility(parentCheckbox, parentMessageField);
+                updateMessageVisibility(studentCheckbox, studentMessageField);
 
                 if (studentSelect && studentSearch) {
                     const studentOptions = Array.from(studentSelect.options).filter((option) => option.value);
@@ -294,8 +323,22 @@
                     });
                 }
 
-                if (form && studentSelect) {
+                if (form && studentSelect && subjectInput && subjectWarning) {
+                    subjectInput.addEventListener('input', function () {
+                        const subjectIsEmpty = !subjectInput.value.trim();
+                        subjectWarning.classList.toggle('hidden', !subjectIsEmpty);
+                        subjectInput.setAttribute('aria-invalid', String(subjectIsEmpty));
+                    });
+
                     form.addEventListener('submit', function (event) {
+                        if (!subjectInput.value.trim()) {
+                            event.preventDefault();
+                            subjectWarning.classList.remove('hidden');
+                            subjectInput.setAttribute('aria-invalid', 'true');
+                            subjectInput.focus();
+                            return;
+                        }
+
                         const studentId = studentSelect.value;
 
                         if (!studentId) {

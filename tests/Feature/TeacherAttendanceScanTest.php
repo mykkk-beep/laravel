@@ -105,6 +105,48 @@ class TeacherAttendanceScanTest extends TestCase
         $response->assertSee("processQRCode");
     }
 
+    public function test_class_scan_action_opens_scanner_with_that_class_locked(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $classRoom = ClassRoom::create([
+            'name' => 'Math 101',
+            'classroom' => 'Room 1',
+            'date' => '2026-06-30',
+            'time' => '08:00',
+            'teacher_id' => $teacher->id,
+        ]);
+
+        $this->actingAs($teacher);
+
+        $this->get(route('teacher.classes.index'))
+            ->assertOk()
+            ->assertSee(route('teacher.attendance.scan', ['class_room_id' => $classRoom->id]));
+
+        $this->get(route('teacher.attendance.scan', ['class_room_id' => $classRoom->id]))
+            ->assertOk()
+            ->assertSee('Scan a student QR code for Math 101.')
+            ->assertSee('id="class_room_id" class="form-input" disabled', false)
+            ->assertSee('value="'.$classRoom->id.'" selected', false)
+            ->assertDontSee('<option value="">Select a class</option>', false);
+    }
+
+    public function test_teacher_cannot_open_another_teachers_class_scanner(): void
+    {
+        $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $otherTeacher = User::factory()->create(['role' => User::ROLE_TEACHER]);
+        $classRoom = ClassRoom::create([
+            'name' => 'Other Class',
+            'classroom' => 'Room 2',
+            'date' => '2026-06-30',
+            'time' => '08:00',
+            'teacher_id' => $otherTeacher->id,
+        ]);
+
+        $this->actingAs($teacher)
+            ->get(route('teacher.attendance.scan', ['class_room_id' => $classRoom->id]))
+            ->assertNotFound();
+    }
+
     public function test_teacher_scan_page_displays_clickable_student_list_for_quick_attendance(): void
     {
         $teacher = User::factory()->create(['role' => User::ROLE_TEACHER]);

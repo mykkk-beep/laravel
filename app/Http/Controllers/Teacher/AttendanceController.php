@@ -51,8 +51,13 @@ class AttendanceController extends Controller
         ];
     }
 
-    private function getFilteredRecords(Request $request)
+    private function getFilteredRecords(Request $request, bool $applyDate = true, ?string $month = null, bool $applyStatus = true)
     {
+        $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'month' => ['nullable', 'date_format:Y-m'],
+        ]);
+
         $teacher = Auth::user();
 
         $query = AttendanceRecord::with(['student.classRoom'])
@@ -64,11 +69,17 @@ class AttendanceController extends Controller
             $query->where('class_room_id', $request->class_room_id);
         }
 
-        if ($request->filled('date')) {
+        if ($applyDate && $request->filled('date')) {
             $query->whereDate('date', $request->date);
         }
 
-        if ($request->filled('status')) {
+        $month = $month ?? $request->input('month');
+        if ($month) {
+            $monthStart = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+            $query->whereBetween('date', [$monthStart->toDateString(), $monthStart->copy()->endOfMonth()->toDateString()]);
+        }
+
+        if ($applyStatus && $request->filled('status')) {
             $query->where('status', $request->status);
         }
 
@@ -94,22 +105,41 @@ class AttendanceController extends Controller
         ];
     }
 
-    private function getWeekDaysForDate(string $date): array
+    private function buildMonthCalendar(string $month, $records): array
     {
-        $startOfWeek = Carbon::parse($date)->startOfWeek();
-        $weekDays = [];
+        $monthStart = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $recordsByDate = $records->groupBy(fn (AttendanceRecord $record) => $record->date->toDateString());
+        $days = array_fill(0, $monthStart->dayOfWeek, null);
 
-        for ($i = 0; $i < 7; $i++) {
-            $day = $startOfWeek->copy()->addDays($i);
+        for ($day = 1; $day <= $monthStart->daysInMonth; $day++) {
+            $date = $monthStart->copy()->day($day)->toDateString();
+            $dayRecords = $recordsByDate->get($date, collect());
+            $studentStatuses = $dayRecords->groupBy(fn (AttendanceRecord $record) => $record->class_room_id.':'.$record->student_id)->map(function ($studentRecords) {
+                if ($studentRecords->contains(fn (AttendanceRecord $record) => in_array($record->status, ['present', 'late'], true))) {
+                    return $studentRecords->contains(fn (AttendanceRecord $record) => $record->status === 'late')
+                        ? 'late'
+                        : 'present';
+                }
 
-            $weekDays[] = [
-                'label' => $day->format('D'),
-                'date' => $day->toDateString(),
-                'is_selected' => $day->toDateString() === $date,
+                return $studentRecords->contains(fn (AttendanceRecord $record) => $record->status === 'excused')
+                    ? 'excused'
+                    : 'absent';
+            });
+
+            $days[] = [
+                'date' => $date,
+                'day' => $day,
+                'total' => $studentStatuses->count(),
+                'present' => $studentStatuses->filter(fn (string $status) => $status === 'present')->count(),
+                'late' => $studentStatuses->filter(fn (string $status) => $status === 'late')->count(),
+                'absent' => $studentStatuses->filter(fn (string $status) => $status === 'absent')->count(),
+                'excused' => $studentStatuses->filter(fn (string $status) => $status === 'excused')->count(),
             ];
         }
 
-        return $weekDays;
+        $days = array_merge($days, array_fill(0, (7 - count($days) % 7) % 7, null));
+
+        return $days;
     }
 
     private function buildStudentAttendanceStatuses(?ClassRoom $classRoom, string $date)
@@ -173,12 +203,21 @@ class AttendanceController extends Controller
             });
     }
 
-    public function scan()
+    public function scan(Request $request)
     {
-        $classes = Auth::user()
+        $teacher = Auth::user();
+        $classes = $teacher
             ->classes()
             ->orderBy('name')
             ->get();
+        $data = $request->validate([
+            'class_room_id' => ['nullable', 'integer'],
+        ]);
+        $selectedClass = isset($data['class_room_id'])
+            ? $classes->firstWhere('id', $data['class_room_id'])
+            : null;
+
+        abort_if(isset($data['class_room_id']) && ! $selectedClass, 404);
 
         $classStudents = $classes->mapWithKeys(function ($class) {
             return [$class->id => $this->getClassStudents($class)->map(function ($student) {
@@ -198,7 +237,7 @@ class AttendanceController extends Controller
             ->take(30)
             ->get();
 
-        return view('teacher.attendance.scan', compact('classes', 'classStudents', 'pendingExcuses'));
+        return view('teacher.attendance.scan', compact('classes', 'classStudents', 'pendingExcuses', 'selectedClass'));
     }
 
     public function records(Request $request)
@@ -208,11 +247,13 @@ class AttendanceController extends Controller
         $records = $this->getFilteredRecords($request);
         $summary = $this->buildSummary($records);
         $selectedDate = $request->date ?: today()->toDateString();
-        $weekDays = $this->getWeekDaysForDate($selectedDate);
+        $month = $request->input('month', Carbon::parse($selectedDate)->format('Y-m'));
+        $monthRecords = $this->getFilteredRecords($request, false, $month, false);
+        $monthDays = $this->buildMonthCalendar($month, $monthRecords);
         $selectedClass = $classes->firstWhere('id', $request->class_room_id);
         $studentStatuses = $this->buildStudentAttendanceStatuses($selectedClass, $selectedDate);
 
-        return view('teacher.attendance.records', compact('records', 'classes', 'summary', 'weekDays', 'selectedDate', 'selectedClass', 'studentStatuses'));
+        return view('teacher.attendance.records', compact('records', 'classes', 'summary', 'selectedDate', 'selectedClass', 'studentStatuses', 'month', 'monthDays'));
     }
 
     public function report(Request $request)
@@ -223,6 +264,45 @@ class AttendanceController extends Controller
         $summary = $this->buildSummary($records);
 
         return view('teacher.attendance.report', compact('records', 'classes', 'summary'));
+    }
+
+    public function calendarExport(Request $request)
+    {
+        $data = $request->validate([
+            'month' => ['nullable', 'date_format:Y-m'],
+            'class_room_id' => ['nullable', 'integer'],
+        ]);
+
+        $teacher = Auth::user();
+        $month = $data['month'] ?? Carbon::now()->format('Y-m');
+        $monthStart = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $selectedClass = null;
+
+        if (! empty($data['class_room_id'])) {
+            $selectedClass = $teacher->classes()->whereKey($data['class_room_id'])->firstOrFail();
+        }
+
+        $recordsQuery = AttendanceRecord::with(['student.classRoom'])
+            ->whereHas('classRoom', function ($query) use ($teacher) {
+                $query->where('teacher_id', $teacher->id);
+            })
+            ->whereBetween('date', [$monthStart->toDateString(), $monthStart->copy()->endOfMonth()->toDateString()]);
+
+        if ($selectedClass) {
+            $recordsQuery->where('class_room_id', $selectedClass->id);
+        }
+
+        $records = $recordsQuery->orderBy('date')->get();
+        $monthDays = $this->buildMonthCalendar($month, $records);
+        $calendarWeeks = array_chunk($monthDays, 7);
+        $summary = $this->buildSummary($records);
+        $className = $selectedClass?->name ?? 'All classes';
+        $filename = "attendance-calendar-{$month}.xls";
+
+        return response()
+            ->view('teacher.attendance.calendar-excel', compact('month', 'monthDays', 'calendarWeeks', 'summary', 'className'))
+            ->header('Content-Type', 'application/vnd.ms-excel; charset=UTF-8')
+            ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
     }
 
     public function export(Request $request, string $format)

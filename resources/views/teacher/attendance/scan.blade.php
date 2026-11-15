@@ -45,17 +45,29 @@
         @endif
         <div class="mb-6">
             <h2 class="text-2xl font-semibold text-slate-900">Scan Student QR Code</h2>
-            <p class="mt-1 text-sm text-slate-500">Select a class, open the camera, and scan a student QR code to mark attendance.</p>
+            <p class="mt-1 text-sm text-slate-500">
+                @if($selectedClass)
+                    Scan a student QR code for {{ $selectedClass->name }}.
+                @else
+                    Select a class, open the camera, and scan a student QR code to mark attendance.
+                @endif
+            </p>
         </div>
 
         <div class="mb-6">
             <label class="form-label">Class</label>
-            <select id="class_room_id" class="form-input">
-                <option value="">Select a class</option>
-                @foreach($classes as $class)
-                    <option value="{{ $class->id }}">{{ $class->name }}</option>
-                @endforeach
-            </select>
+            @if($selectedClass)
+                <select id="class_room_id" class="form-input" disabled aria-disabled="true">
+                    <option value="{{ $selectedClass->id }}" selected>{{ $selectedClass->name }}</option>
+                </select>
+            @else
+                <select id="class_room_id" class="form-input">
+                    <option value="">Select a class</option>
+                    @foreach($classes as $class)
+                        <option value="{{ $class->id }}">{{ $class->name }}</option>
+                    @endforeach
+                </select>
+            @endif
         </div>
 
         <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -882,6 +894,11 @@ async function stopCamera() {
     window.addEventListener('load', () => {
         renderStudentSelection(classSelect.value);
         populateCameras();
+        if (classSelect.value) {
+            initializeAttendance(classSelect.value).catch((error) => {
+                setStatus(`Unable to initialize attendance: ${error.message}`, 'danger');
+            });
+        }
     });
 
     window.addEventListener('beforeunload', () => {
